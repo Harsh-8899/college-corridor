@@ -93,6 +93,15 @@ enum LeadStage {
   LOST
 }
 
+enum LeadStatus {
+  NEW
+  ASSIGNED
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+}
+
 enum TaskStatus {
   OPEN
   IN_PROGRESS
@@ -114,34 +123,36 @@ enum RecommendationCategory {
 }
 
 model User {
-  id            String      @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String      @unique
-  phone         String?     @unique
+  email         String     @unique
+  phone         String?    @unique
   image         String?
-  role          UserRole    @default(STUDENT)
-  status        UserStatus  @default(ACTIVE)
+  role          UserRole   @default(STUDENT)
+  status        UserStatus @default(ACTIVE)
   emailVerified DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
 
-  accounts              Account[]
-  sessions              Session[]
-  studentProfile        StudentProfile?
-  counselorProfile      CounselorProfile?
-  savedColleges         SavedCollege[]
-  applications          Application[]       @relation("StudentApplications")
-  reviews               Review[]
-  bookingsAsStudent     MentorshipBooking[] @relation("StudentBookings")
-  bookingsAsCounselor   MentorshipBooking[] @relation("CounselorBookings")
-  assignedStudents      CounselorAssignment[] @relation("CounselorAssignments")
-  counselorAssignments  CounselorAssignment[] @relation("StudentAssignments")
-  crmNotesAuthored      CrmNote[]           @relation("CrmNoteAuthor")
-  auditLogs             AuditLog[]
-  payments              Payment[]
-  reports               PdfReport[]
-  recommendations       Recommendation[]
+  accounts             Account[]
+  sessions             Session[]
+  studentProfile       StudentProfile?
+  counselorProfile     CounselorProfile?
+  savedColleges        SavedCollege[]
+  applications         Application[]         @relation("StudentApplications")
+  reviews              Review[]
+  bookingsAsStudent    MentorshipBooking[]   @relation("StudentBookings")
+  bookingsAsCounselor  MentorshipBooking[]   @relation("CounselorBookings")
+  assignedStudents     CounselorAssignment[] @relation("CounselorAssignments")
+  counselorAssignments CounselorAssignment[] @relation("StudentAssignments")
+  crmNotesAuthored     CrmNote[]             @relation("CrmNoteAuthor")
+  auditLogs            AuditLog[]
+  payments             Payment[]
+  reports              PdfReport[]
+  recommendations      Recommendation[]
+  leadsAssigned        Lead[]                @relation("AssignedLeads")
+  notifications        Notification[]
 
   @@index([role])
   @@index([status])
@@ -185,12 +196,12 @@ model VerificationToken {
 }
 
 model StudentProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
+  id              String      @id @default(cuid())
+  userId          String      @unique
   dateOfBirth     DateTime?
   city            String?
   state           String?
-  country         String   @default("India")
+  country         String      @default("India")
   admissionYear   Int?
   currentLevel    String?
   targetDegree    String?
@@ -200,8 +211,8 @@ model StudentProfile {
   preferredStates String[]
   preferredCities String[]
   interests       String[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   academics   StudentAcademic[]
@@ -210,15 +221,15 @@ model StudentProfile {
 }
 
 model StudentAcademic {
-  id               String   @id @default(cuid())
-  studentProfileId String
-  level            String
-  institution      String?
+  id                String   @id @default(cuid())
+  studentProfileId  String
+  level             String
+  institution       String?
   boardOrUniversity String?
-  stream           String?
-  scoreType        String?
-  scoreValue       Decimal? @db.Decimal(6, 2)
-  passingYear      Int?
+  stream            String?
+  scoreType         String?
+  scoreValue        Decimal? @db.Decimal(6, 2)
+  passingYear       Int?
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 
@@ -241,45 +252,45 @@ model StudentEntranceExam {
 }
 
 model StudentPreference {
-  id               String     @id @default(cuid())
-  studentProfileId String     @unique
-  courseIds        String[]
-  specializations  String[]
-  locationWeight   Int        @default(20)
-  budgetWeight     Int        @default(20)
-  placementWeight  Int        @default(25)
-  rankingWeight    Int        @default(15)
-  reviewsWeight    Int        @default(10)
-  scholarshipWeight Int       @default(10)
-  riskPreference   String?
+  id                String   @id @default(cuid())
+  studentProfileId  String   @unique
+  courseIds         String[]
+  specializations   String[]
+  locationWeight    Int      @default(20)
+  budgetWeight      Int      @default(20)
+  placementWeight   Int      @default(25)
+  rankingWeight     Int      @default(15)
+  reviewsWeight     Int      @default(10)
+  scholarshipWeight Int      @default(10)
+  riskPreference    String?
 
   studentProfile StudentProfile @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
 }
 
 model CounselorProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  bio          String?
-  specialties  String[]
-  languages    String[]
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  bio             String?
+  specialties     String[]
+  languages       String[]
   experienceYears Int?
-  hourlyRate   Int?
-  isAvailable  Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  hourlyRate      Int?
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  user          User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   availability CounselorAvailability[]
 }
 
 model CounselorAvailability {
-  id                 String   @id @default(cuid())
+  id                 String  @id @default(cuid())
   counselorProfileId String
   dayOfWeek          Int
   startTime          String
   endTime            String
-  timezone           String   @default("Asia/Kolkata")
-  isActive           Boolean  @default(true)
+  timezone           String  @default("Asia/Kolkata")
+  isActive           Boolean @default(true)
 
   counselorProfile CounselorProfile @relation(fields: [counselorProfileId], references: [id], onDelete: Cascade)
 
@@ -287,9 +298,9 @@ model CounselorAvailability {
 }
 
 model College {
-  id              String           @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
-  slug            String           @unique
+  slug            String            @unique
   shortName       String?
   description     String?
   ownership       CollegeOwnership?
@@ -299,23 +310,24 @@ model College {
   websiteUrl      String?
   logoFileId      String?
   heroImageFileId String?
-  status          PublishStatus    @default(DRAFT)
-  isPartner       Boolean          @default(false)
-  isFeatured      Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  status          PublishStatus     @default(DRAFT)
+  isPartner       Boolean           @default(false)
+  isFeatured      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?
 
-  campuses      Campus[]
-  courses       CollegeCourse[]
-  rankings      Ranking[]
-  reviews       Review[]
-  placements    PlacementStat[]
-  scholarships  Scholarship[]
-  partnerLinks  PartnerLink[]
-  savedBy       SavedCollege[]
-  applications  Application[]
-  media         FileAsset[]
+  campuses     Campus[]
+  courses      CollegeCourse[]
+  rankings     Ranking[]
+  reviews      Review[]
+  placements   PlacementStat[]
+  scholarships Scholarship[]
+  partnerLinks PartnerLink[]
+  savedBy      SavedCollege[]
+  applications Application[]
+  media        FileAsset[]
+  leads        Lead[]
 
   @@index([name])
   @@index([status])
@@ -324,17 +336,17 @@ model College {
 }
 
 model Campus {
-  id          String  @id @default(cuid())
-  collegeId   String
-  name        String
-  address     String?
-  city        String
-  state       String
-  country     String  @default("India")
-  postalCode  String?
-  latitude    Decimal? @db.Decimal(10, 7)
-  longitude   Decimal? @db.Decimal(10, 7)
-  hasHostel   Boolean @default(false)
+  id            String   @id @default(cuid())
+  collegeId     String
+  name          String
+  address       String?
+  city          String
+  state         String
+  country       String   @default("India")
+  postalCode    String?
+  latitude      Decimal? @db.Decimal(10, 7)
+  longitude     Decimal? @db.Decimal(10, 7)
+  hasHostel     Boolean  @default(false)
   hostelDetails Json?
 
   college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
@@ -360,30 +372,30 @@ model Course {
 }
 
 model CollegeCourse {
-  id                String       @id @default(cuid())
-  collegeId         String
-  courseId          String
-  specialization    String?
-  mode              CourseMode
-  durationMonths    Int?
-  totalFees         Int?
-  applicationFee    Int?
-  currency          String       @default("INR")
-  seats             Int?
-  eligibility       String?
-  admissionProcess  String?
-  examsAccepted     String[]
-  applicationOpenAt DateTime?
+  id                 String        @id @default(cuid())
+  collegeId          String
+  courseId           String
+  specialization     String?
+  mode               CourseMode
+  durationMonths     Int?
+  totalFees          Int?
+  applicationFee     Int?
+  currency           String        @default("INR")
+  seats              Int?
+  eligibility        String?
+  admissionProcess   String?
+  examsAccepted      String[]
+  applicationOpenAt  DateTime?
   applicationCloseAt DateTime?
-  status            PublishStatus @default(DRAFT)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  status             PublishStatus @default(DRAFT)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
-  college      College       @relation(fields: [collegeId], references: [id], onDelete: Cascade)
-  course       Course        @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  feeBreakups  FeeBreakup[]
-  placements   PlacementStat[]
-  applications Application[]
+  college         College          @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  feeBreakups     FeeBreakup[]
+  placements      PlacementStat[]
+  applications    Application[]
   recommendations Recommendation[]
 
   @@index([collegeId])
@@ -394,7 +406,7 @@ model CollegeCourse {
 }
 
 model FeeBreakup {
-  id              String @id @default(cuid())
+  id              String  @id @default(cuid())
   collegeCourseId String
   label           String
   amount          Int
@@ -426,7 +438,7 @@ model PlacementStat {
 }
 
 model Ranking {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   collegeId String
   source    String
   category  String?
@@ -440,14 +452,14 @@ model Ranking {
 }
 
 model Scholarship {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   collegeId   String
   name        String
   description String?
   amount      Int?
   eligibility String?
   deadline    DateTime?
-  isActive    Boolean  @default(true)
+  isActive    Boolean   @default(true)
 
   college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
@@ -456,23 +468,23 @@ model Scholarship {
 }
 
 model Review {
-  id                 String       @id @default(cuid())
-  userId             String
-  collegeId          String
-  ratingOverall      Int
-  ratingAcademics    Int?
-  ratingPlacements   Int?
-  ratingCampus       Int?
-  ratingHostel       Int?
-  ratingFaculty      Int?
+  id                  String       @id @default(cuid())
+  userId              String
+  collegeId           String
+  ratingOverall       Int
+  ratingAcademics     Int?
+  ratingPlacements    Int?
+  ratingCampus        Int?
+  ratingHostel        Int?
+  ratingFaculty       Int?
   ratingValueForMoney Int?
-  title              String?
-  body               String
-  status             ReviewStatus @default(PENDING)
-  isVerified         Boolean      @default(false)
-  moderationReason   String?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  title               String?
+  body                String
+  status              ReviewStatus @default(PENDING)
+  isVerified          Boolean      @default(false)
+  moderationReason    String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
@@ -519,11 +531,11 @@ model Application {
 }
 
 model CounselorAssignment {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   studentId   String
   counselorId String
   stage       LeadStage @default(NEW_LEAD)
-  assignedAt  DateTime @default(now())
+  assignedAt  DateTime  @default(now())
   endedAt     DateTime?
 
   student   User @relation("StudentAssignments", fields: [studentId], references: [id], onDelete: Cascade)
@@ -532,6 +544,35 @@ model CounselorAssignment {
   @@index([studentId])
   @@index([counselorId])
   @@index([stage])
+}
+
+model Lead {
+  id                   String     @id @default(cuid())
+  fullName             String
+  phone                String
+  email                String
+  city                 String
+  courseInterestedIn   String
+  interestedCollegeId  String?
+  sourcePage           String
+  selectedCollegeIds   String[]
+  unlockedContentKeys  String[]
+  status               LeadStatus @default(NEW)
+  assignedCounselorId  String?
+  createdStudentUserId String?
+  metadata             Json?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  interestedCollege College? @relation(fields: [interestedCollegeId], references: [id], onDelete: SetNull)
+  assignedCounselor User?    @relation("AssignedLeads", fields: [assignedCounselorId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([phone])
+  @@index([status])
+  @@index([assignedCounselorId])
+  @@index([interestedCollegeId])
+  @@index([createdAt])
 }
 
 model CrmNote {
@@ -582,21 +623,21 @@ model CallLog {
 }
 
 model MentorshipBooking {
-  id            String        @id @default(cuid())
-  studentId     String
-  counselorId   String
-  topic         String
-  startsAt      DateTime
-  endsAt        DateTime
-  timezone      String        @default("Asia/Kolkata")
-  status        BookingStatus @default(PENDING_PAYMENT)
-  meetingUrl    String?
-  studentNotes  String?
+  id             String        @id @default(cuid())
+  studentId      String
+  counselorId    String
+  topic          String
+  startsAt       DateTime
+  endsAt         DateTime
+  timezone       String        @default("Asia/Kolkata")
+  status         BookingStatus @default(PENDING_PAYMENT)
+  meetingUrl     String?
+  studentNotes   String?
   counselorNotes String?
-  amount        Int           @default(0)
-  currency      String        @default("INR")
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  amount         Int           @default(0)
+  currency       String        @default("INR")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   student   User      @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
   counselor User      @relation("CounselorBookings", fields: [counselorId], references: [id], onDelete: Restrict)
@@ -622,8 +663,8 @@ model Payment {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  user    User                @relation(fields: [userId], references: [id], onDelete: Restrict)
-  booking MentorshipBooking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  user    User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  booking MentorshipBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([bookingId])
@@ -631,16 +672,16 @@ model Payment {
 }
 
 model PartnerLink {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   collegeId   String
   label       String
   url         String
   campaignKey String?
-  isActive    Boolean  @default(true)
+  isActive    Boolean   @default(true)
   startsAt    DateTime?
   endsAt      DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   college College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
@@ -706,13 +747,13 @@ model FileAsset {
 }
 
 model AnalyticsEvent {
-  id        String   @id @default(cuid())
-  userId    String?
-  eventName String
+  id         String   @id @default(cuid())
+  userId     String?
+  eventName  String
   entityType String?
   entityId   String?
   properties Json?
-  createdAt DateTime @default(now())
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([eventName])
@@ -739,6 +780,24 @@ model AuditLog {
   @@index([createdAt])
 }
 
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String?
+  role      UserRole?
+  title     String
+  body      String
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([role])
+  @@index([readAt])
+  @@index([createdAt])
+}
+
 model SystemSetting {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -746,4 +805,3 @@ model SystemSetting {
   updatedBy String?
   updatedAt DateTime @updatedAt
 }
-

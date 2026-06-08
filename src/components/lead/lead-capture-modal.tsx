@@ -16,7 +16,7 @@ type LeadCaptureModalProps = {
   onUnlocked?: () => void;
 };
 
-const unlockStorageKey = "eduoofa-premium-unlocked";
+const unlockStorageKey = "college-corridor-premium-unlocked";
 
 export function isPremiumUnlocked() {
   if (typeof window === "undefined") {
@@ -75,7 +75,7 @@ export function LeadCaptureModal({
 
     if (!response.ok) {
       setStatus("error");
-      setMessage("Lead saved locally for this demo. Connect PostgreSQL to persist CRM records.");
+      setMessage("Lead saved locally for this demo. Connect PostgreSQL to persist lead records.");
       window.localStorage.setItem(unlockStorageKey, "true");
       onUnlocked?.();
       setOpen(false);
@@ -179,4 +179,3 @@ function Field({
     </div>
   );
 }
-

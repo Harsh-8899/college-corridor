@@ -2,21 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, GraduationCap, Menu, Users } from "lucide-react";
+import { BarChart3, GraduationCap, Menu, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/", label: "Home" },
   { href: "/colleges", label: "Colleges" },
-  { href: "/compare", label: "Compare" },
-  { href: "/admin", label: "Admin" },
-  { href: "/counselor", label: "Counselor" },
-  { href: "/crm", label: "CRM" }
+  { href: "/compare", label: "Compare" }
 ];
 
 export function SiteNav() {
   const pathname = usePathname();
+
+  if (pathname.startsWith("/internal")) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -25,7 +26,7 @@ export function SiteNav() {
           <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GraduationCap className="h-5 w-5" />
           </span>
-          <span>EduOofa</span>
+          <span>College Corridor</span>
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
           {links.map((link) => (
@@ -45,7 +46,13 @@ export function SiteNav() {
           <Button asChild variant="outline" className="hidden sm:inline-flex">
             <Link href="/login">
               <Users className="h-4 w-4" />
-              Login
+              Student Login
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" className="hidden lg:inline-flex">
+            <Link href="/register">
+              <UserPlus className="h-4 w-4" />
+              Student Registration
             </Link>
           </Button>
           <Button asChild>

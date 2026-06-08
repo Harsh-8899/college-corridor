@@ -44,13 +44,13 @@ export async function POST(request: Request) {
           role: "ADMIN",
           title: "New lead captured",
           body: `${lead.fullName} requested premium access from ${lead.sourcePage}.`,
-          href: "/admin"
+          href: "/internal/admin"
         },
         {
           role: "COUNSELOR",
           title: "New counseling lead",
           body: `${lead.fullName} is interested in ${lead.courseInterestedIn}.`,
-          href: "/counselor"
+          href: "/internal/counselor"
         }
       ]
     });
@@ -78,4 +78,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

@@ -20,13 +20,13 @@ export default function HomePage() {
       <section className="border-b bg-muted/35">
         <div className="container grid gap-8 py-12 md:grid-cols-[1.2fr_0.8fr] md:py-16">
           <div className="max-w-3xl">
-            <p className="text-sm font-semibold uppercase tracking-normal text-primary">EduOofa admissions</p>
+            <p className="text-sm font-semibold uppercase tracking-normal text-primary">College Corridor admissions</p>
             <h1 className="mt-4 text-4xl font-semibold tracking-normal md:text-6xl">
-              Find the right college and move faster from research to admission.
+              Discover the right college with sharper comparisons and guided admissions.
             </h1>
             <p className="mt-5 text-lg text-muted-foreground">
-              Students browse freely. Premium insights, reports, AI recommendations, and counseling unlock
-              after one lead form, so every high-intent action flows into CRM.
+              Browse freely, compare confidently, and unlock premium reports, placement insights,
+              AI recommendations, and counseling through one lead form.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
@@ -92,4 +92,3 @@ export default function HomePage() {
     </>
   );
 }
-

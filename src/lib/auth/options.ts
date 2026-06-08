@@ -2,10 +2,10 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 const demoUsers = [
-  { id: "demo-student", name: "Demo Student", email: "student@eduoofa.com", role: "STUDENT" },
-  { id: "demo-counselor", name: "Demo Counselor", email: "counselor@eduoofa.com", role: "COUNSELOR" },
-  { id: "demo-admin", name: "Demo Admin", email: "admin@eduoofa.com", role: "ADMIN" },
-  { id: "demo-super-admin", name: "Demo Super Admin", email: "superadmin@eduoofa.com", role: "SUPER_ADMIN" }
+  { id: "demo-student", name: "Demo Student", email: "student@collegecorridor.com", role: "STUDENT" },
+  { id: "demo-counselor", name: "Demo Counselor", email: "counselor@collegecorridor.com", role: "COUNSELOR" },
+  { id: "demo-crm", name: "Demo CRM Executive", email: "crm@collegecorridor.com", role: "CRM_EXECUTIVE" },
+  { id: "demo-admin", name: "Demo Admin", email: "admin@collegecorridor.com", role: "ADMIN" }
 ];
 
 export const authOptions: NextAuthOptions = {
@@ -19,15 +19,11 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Demo login",
       credentials: {
-        email: { label: "Email", type: "email" },
-        role: { label: "Role", type: "text" }
+        email: { label: "Email", type: "email" }
       },
       async authorize(credentials) {
         const email = credentials?.email?.toLowerCase();
-        const requestedRole = credentials?.role?.toUpperCase();
-        const demoUser = demoUsers.find(
-          (user) => user.email === email || user.role === requestedRole
-        );
+        const demoUser = demoUsers.find((user) => user.email === email);
 
         if (!demoUser) {
           return null;

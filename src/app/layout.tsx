@@ -3,8 +3,8 @@ import "./globals.css";
 import { SiteNav } from "@/components/layout/site-nav";
 
 export const metadata: Metadata = {
-  title: "EduOofa - College Admissions Platform",
-  description: "Discover, compare, shortlist, and apply to colleges with lead-first counseling workflows."
+  title: "College Corridor - College Admissions Platform",
+  description: "Discover, compare, shortlist, and apply to colleges with premium counseling workflows."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

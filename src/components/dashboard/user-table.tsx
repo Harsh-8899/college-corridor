@@ -114,6 +114,7 @@ export function UserForm({ onSaved, onCancel }: UserFormProps) {
               <option value="COUNSELOR">Counselor (View Leads)</option>
               <option value="CRM">CRM Executive</option>
               <option value="FINANCE">Finance Executive</option>
+              <option value="UNIVERSITY_PARTNER">University Partner</option>
               <option value="ADMIN">Admin (Full Access)</option>
               <option value="SUPER_ADMIN">Super Admin (System Owner)</option>
             </select>
@@ -194,6 +195,7 @@ export function UserTable({ initialUsers }: { initialUsers: { id: string; name: 
                         user.role === 'CRM' ? 'bg-teal-100 text-teal-800' :
                         user.role === 'EDITOR' ? 'bg-blue-100 text-blue-800' : 
                         user.role === 'FINANCE' ? 'bg-indigo-100 text-indigo-800' :
+                        user.role === 'UNIVERSITY_PARTNER' ? 'bg-amber-100 text-amber-800' :
                         'bg-slate-100 text-slate-800'}`}>
                       {user.role}
                     </span>

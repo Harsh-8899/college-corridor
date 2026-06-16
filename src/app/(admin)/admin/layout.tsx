@@ -9,7 +9,10 @@ import {
   Settings,
   Shield,
   LogOut,
-  GraduationCap
+  GraduationCap,
+  BookOpen,
+  Rss,
+  MessageSquare
 } from "lucide-react";
 import { authOptions } from "@/lib/auth/options";
 
@@ -26,6 +29,9 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { href: "/users", label: "Users", icon: Users },
     { href: "/colleges", label: "Colleges", icon: Building2 },
+    { href: "/exams", label: "Exams Directory", icon: BookOpen },
+    { href: "/blogs", label: "Blog Articles", icon: Rss },
+    { href: "/qa", label: "Q&A Moderation", icon: MessageSquare },
     { href: "/leads", label: "Leads", icon: FileText },
     { href: "/crm", label: "CRM Console", icon: Shield },
     { href: "/settings", label: "Settings", icon: Settings }

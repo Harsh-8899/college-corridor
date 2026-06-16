@@ -150,6 +150,106 @@ async function main() {
       assignedCounselorId: counselor.id
     }
   });
+
+  // Seed University
+  const university = await prisma.university.upsert({
+    where: { slug: "greenwood-university" },
+    update: {},
+    create: {
+      name: "Greenwood University",
+      slug: "greenwood-university",
+      description: "Governing university affiliate for Greenwood Institute.",
+      logoUrl: "/static/university-logo.png",
+      websiteUrl: "https://greenwood.edu"
+    }
+  });
+
+  // Connect seed college to university
+  await prisma.college.update({
+    where: { id: college.id },
+    data: { universityId: university.id }
+  });
+
+  // Seed Exam
+  await prisma.exam.upsert({
+    where: { slug: "jee-main" },
+    update: {},
+    create: {
+      name: "JEE Main",
+      slug: "jee-main",
+      category: "Engineering",
+      syllabus: "Physics, Chemistry, Mathematics syllabus.",
+      pattern: "Computer Based Test (CBT), 90 questions, 300 marks.",
+      cutoffDetails: { general: "90 percentile", obc: "75 percentile" },
+      faqs: [{ q: "What is the fee?", a: "Approx. 1000 INR." }]
+    }
+  });
+
+  // Seed Study Abroad Country
+  await prisma.studyAbroadCountry.upsert({
+    where: { slug: "usa" },
+    update: {},
+    create: {
+      name: "USA",
+      slug: "usa",
+      averageCost: "$30,000 - $50,000 per year",
+      visaProcess: "F1 student visa interview process.",
+      jobProspects: "OPT/CPT options, strong tech industry placement.",
+      scholarships: "Fulbright, university specific scholarships.",
+      faqs: [{ q: "Can I work part-time?", a: "Yes, up to 20 hours on-campus." }]
+    }
+  });
+
+  // Fetch admin for authoring blog
+  const adminUser = await prisma.user.findFirst({
+    where: { role: "ADMIN" }
+  });
+
+  if (adminUser) {
+    // Seed Blog Post
+    await prisma.blogPost.upsert({
+      where: { slug: "top-5-btech-specializations-2026" },
+      update: {},
+      create: {
+        authorId: adminUser.id,
+        title: "Top 5 B.Tech Specializations in 2026",
+        slug: "top-5-btech-specializations-2026",
+        category: "Admissions",
+        content: "Artificial Intelligence, Data Science, Cyber Security...",
+        metaTitle: "Top 5 B.Tech Specializations in 2026",
+        metaDescription: "Read the top 5 engineering specializations for 2026 admissions.",
+        isPublished: true
+      }
+    });
+  }
+
+  // Fetch student for asking question
+  const studentUser = await prisma.user.findFirst({
+    where: { role: "STUDENT" }
+  });
+
+  if (studentUser && counselor) {
+    // Seed Question
+    const question = await prisma.question.create({
+      data: {
+        userId: studentUser.id,
+        title: "What is the average placement package for CSE?",
+        body: "I am planning to join Greenwood and want to know details about CSE placements.",
+        category: "Placements",
+        isApproved: true
+      }
+    });
+
+    // Seed Answer
+    await prisma.answer.create({
+      data: {
+        questionId: question.id,
+        userId: counselor.id,
+        body: "The average package for CSE is 9.2 LPA, with top companies like Amazon and TCS recruiting.",
+        isApproved: true
+      }
+    });
+  }
 }
 
 main()

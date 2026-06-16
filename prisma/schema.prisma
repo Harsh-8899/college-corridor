@@ -18,6 +18,7 @@ enum UserRole {
   EDITOR
   FINANCE
   STUDENT
+  UNIVERSITY_PARTNER
 }
 
 enum UserStatus {
@@ -158,6 +159,10 @@ model User {
   recommendations      Recommendation[]
   leadsAssigned        Lead[]                @relation("AssignedLeads")
   notifications        Notification[]
+  universityPartner    UniversityPartner?
+  questions            Question[]
+  answers              Answer[]
+  blogPosts            BlogPost[]
 
   @@index([role])
   @@index([status])
@@ -318,9 +323,12 @@ model College {
   status          PublishStatus     @default(DRAFT)
   isPartner       Boolean           @default(false)
   isFeatured      Boolean           @default(false)
+  universityId    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?
+
+  university   University?       @relation(fields: [universityId], references: [id], onDelete: SetNull)
 
   campuses     Campus[]
   courses      CollegeCourse[]
@@ -810,6 +818,100 @@ model SystemSetting {
   updatedBy String?
   updatedAt DateTime @updatedAt
 }
+
+model University {
+  id              String              @id @default(cuid())
+  name            String
+  slug            String              @unique
+  description     String?
+  logoUrl         String?
+  websiteUrl      String?
+  createdAt       DateTime            @default(now())
+  colleges        College[]
+  partners        UniversityPartner[]
+}
+
+model UniversityPartner {
+  id              String      @id @default(cuid())
+  userId          String      @unique
+  universityId    String
+  position        String?
+  isActive        Boolean     @default(true)
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  university      University  @relation(fields: [universityId], references: [id], onDelete: Cascade)
+}
+
+model Exam {
+  id              String      @id @default(cuid())
+  name            String
+  slug            String      @unique
+  category        String
+  syllabus        String?     @db.Text
+  pattern         String?     @db.Text
+  examDate        DateTime?
+  resultDate      DateTime?
+  cutoffDetails   Json?
+  faqs            Json?
+  createdAt       DateTime    @default(now())
+}
+
+model Question {
+  id              String      @id @default(cuid())
+  userId          String
+  title           String
+  body            String      @db.Text
+  category        String
+  isApproved      Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers         Answer[]
+  
+  @@index([category])
+}
+
+model Answer {
+  id              String      @id @default(cuid())
+  questionId      String
+  userId          String
+  body            String      @db.Text
+  isApproved      Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  
+  question        Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BlogPost {
+  id              String      @id @default(cuid())
+  authorId        String
+  title           String
+  slug            String      @unique
+  category        String
+  content         String      @db.Text
+  metaTitle       String?
+  metaDescription String?
+  isPublished     Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  
+  author          User        @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  
+  @@index([category])
+}
+
+model StudyAbroadCountry {
+  id              String      @id @default(cuid())
+  name            String      @unique
+  slug            String      @unique
+  averageCost     String
+  visaProcess     String      @db.Text
+  jobProspects    String      @db.Text
+  scholarships    String      @db.Text
+  faqs            Json?
+  createdAt       DateTime    @default(now())
+}
+
 
 model AdminActivityLog {
   id        String   @id @default(cuid())

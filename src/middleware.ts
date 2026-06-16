@@ -66,6 +66,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  // Protect university partner routes
+  if (pathname.startsWith("/partner")) {
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET
+    });
+
+    if (!token || !["UNIVERSITY_PARTNER", "ADMIN", "SUPER_ADMIN"].includes(token.role || "")) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // Protect internal routes on public domain
   if (pathname.startsWith("/internal")) {
     const token = await getToken({

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { execSync } from "child_process";
 
 const prisma = new PrismaClient();
 
@@ -304,6 +305,9 @@ async function main() {
       create: country
     });
   }
+
+  console.log("Triggering CSV import pipeline inside seed script...");
+  execSync("npx tsx scripts/import-all-institution-data.ts", { stdio: "inherit" });
 }
 
 main()

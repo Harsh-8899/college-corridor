@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidatePath } from "next/cache";
 import { authOptions } from "@/lib/auth/options";
 import { getCollegeById, updateCollege, deleteCollege } from "@/lib/data/colleges";
 
@@ -17,7 +18,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const college = getCollegeById(id);
+  const college = await getCollegeById(id);
   if (!college) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "College not found." } },
@@ -67,6 +68,11 @@ export async function PUT(request: Request, context: RouteContext) {
       );
     }
 
+    // Revalidate paths for static cache invalidation
+    revalidatePath("/colleges");
+    revalidatePath(`/colleges/${updated.slug}`);
+    revalidatePath("/");
+
     return NextResponse.json({ data: updated, error: null });
   } catch (error) {
     console.error("Failed to update college:", error);
@@ -87,6 +93,14 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  const college = await getCollegeById(id);
+  if (!college) {
+    return NextResponse.json(
+      { error: { code: "NOT_FOUND", message: "College not found." } },
+      { status: 404 }
+    );
+  }
+
   const deleted = await deleteCollege(id);
   if (!deleted) {
     return NextResponse.json(
@@ -94,6 +108,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
       { status: 404 }
     );
   }
+
+  // Revalidate paths for static cache invalidation
+  revalidatePath("/colleges");
+  revalidatePath(`/colleges/${college.slug}`);
+  revalidatePath("/");
 
   return NextResponse.json({ data: { deleted: true }, error: null });
 }

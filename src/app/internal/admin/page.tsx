@@ -18,7 +18,7 @@ export default async function AdminDashboardPage() {
     redirect("/login");
   }
 
-  const colleges = getColleges();
+  const colleges = await getColleges();
   const isAdmin = session.user.role === "ADMIN";
 
   // Fetch users if admin

@@ -12,7 +12,7 @@ export default async function AdminCollegesPage() {
     redirect("/login");
   }
 
-  const collegesList = getColleges();
+  const collegesList = await getColleges();
 
   return (
     <div className="space-y-6">

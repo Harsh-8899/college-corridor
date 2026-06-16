@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumGate } from "@/components/lead/premium-gate";
 import { getCollege } from "@/lib/data/colleges";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
 export default async function CollegeDetailsPage({ params }: PageProps) {
   const { slug } = await params;
-  const college = getCollege(slug);
+  const college = await getCollege(slug);
 
   if (!college) {
     notFound();

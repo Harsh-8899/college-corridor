@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import { revalidatePath } from "next/cache";
 import { authOptions } from "@/lib/auth/options";
 import { getColleges, addCollege } from "@/lib/data/colleges";
 
@@ -12,7 +13,7 @@ export async function GET() {
     );
   }
 
-  const colleges = getColleges();
+  const colleges = await getColleges();
   return NextResponse.json({ data: colleges, error: null });
 }
 
@@ -52,6 +53,12 @@ export async function POST(request: Request) {
     }
 
     const college = await addCollege(body);
+
+    // Revalidate paths for static cache invalidation
+    revalidatePath("/colleges");
+    revalidatePath(`/colleges/${college.slug}`);
+    revalidatePath("/");
+
     return NextResponse.json({ data: college, error: null }, { status: 201 });
   } catch (error) {
     console.error("Failed to create college:", error);

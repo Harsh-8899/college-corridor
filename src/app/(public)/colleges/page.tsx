@@ -1,9 +1,13 @@
 import { Search } from "lucide-react";
 import { CollegeCard } from "@/components/college/college-card";
 import { Input } from "@/components/ui/input";
-import { colleges } from "@/lib/data/colleges";
+import { getColleges } from "@/lib/data/colleges";
 
-export default function CollegesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function CollegesPage() {
+  const collegesList = await getColleges();
+
   return (
     <div className="page-shell space-y-6">
       <div>
@@ -31,7 +35,7 @@ export default function CollegesPage() {
         </select>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        {colleges.map((college) => (
+        {collegesList.map((college) => (
           <CollegeCard key={college.id} college={college} />
         ))}
       </div>

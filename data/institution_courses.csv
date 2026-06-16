@@ -1,0 +1,24 @@
+institution_slug,course_name,stream,level,degree,specialization,duration,mode,total_fees,yearly_fees,eligibility,exams_accepted,seats,application_deadline
+iit-delhi,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,800000,200000,10+2 with 75% aggregate and JEE Advanced,JEE Advanced,100,2026-06-30
+iit-delhi,M.Tech in Artificial Intelligence,Engineering,PG,M.Tech,Artificial Intelligence,2 Years,Full-Time,200000,100000,B.Tech in CS/IT or equivalent with valid GATE score,GATE,40,2026-05-15
+iit-bombay,B.Tech in Electrical Engineering,Engineering,UG,B.Tech,Electrical Engineering,4 Years,Full-Time,800000,200000,10+2 with 75% aggregate and JEE Advanced,JEE Advanced,90,2026-06-30
+iit-bombay,M.B.A.,Management,PG,MBA,General Management,2 Years,Full-Time,1200000,600000,Bachelor degree with 50% aggregate and CAT score,CAT,120,2026-01-31
+iit-madras,B.Tech in Mechanical Engineering,Engineering,UG,B.Tech,Mechanical Engineering,4 Years,Full-Time,800000,200000,10+2 with 75% aggregate and JEE Advanced,JEE Advanced,120,2026-06-30
+iim-ahmedabad,Post Graduate Programme in Management (PGP),Management,PG,MBA,General Management,2 Years,Full-Time,2500000,1250000,Bachelor degree with 50% aggregate or equivalent,CAT,400,2025-12-15
+aiims-delhi,Bachelor of Medicine and Bachelor of Surgery (MBBS),Medical,UG,MBBS,Medicine,5.5 Years,Full-Time,13500,2700,10+2 with PCB (50% aggregate) and NEET UG,NEET UG,125,2026-04-30
+delhi-university,B.A. (Hons) in Economics,Arts & Humanities,UG,B.A.,Economics,3 Years,Full-Time,36000,12000,10+2 from recognized board and CUET UG,CUET UG,120,2026-06-15
+bhu,B.Sc. (Hons) in Agriculture,Science,UG,B.Sc.,Agriculture,4 Years,Full-Time,40000,10000,10+2 with PCB/Agriculture and CUET UG,CUET UG,154,2026-06-15
+bits-pilani,B.E. in Computer Science,Engineering,UG,B.E.,Computer Science,4 Years,Full-Time,2200000,550000,10+2 with Physics, Chemistry, Math (75% aggregate),BITSAT,120,2026-06-10
+bits-pilani,M.E. in Software Systems,Engineering,PG,M.E.,Software Systems,2 Years,Full-Time,1100000,550000,B.E./B.Tech or equivalent with valid BITS HD/GATE score,BITS HD / GATE,30,2026-05-30
+manipal-academy,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,1800000,450000,10+2 with 50% in PCM and MET,MET,240,2026-06-15
+jnu,M.A. in International Relations,Arts & Humanities,PG,M.A.,International Relations,2 Years,Full-Time,2000,1000,Bachelor degree with 50% aggregate and CUET PG,CUET PG,50,2026-06-20
+nit-trichy,B.Tech in Civil Engineering,Engineering,UG,B.Tech,Civil Engineering,4 Years,Full-Time,600000,150000,10+2 with JEE Main and JoSAA counseling,JEE Main,100,2026-06-30
+vit-vellore,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,790000,198000,10+2 with 60% in PCM and VITEEE,VITEEE,1200,2026-05-20
+srm-chennai,B.Tech in Aerospace Engineering,Engineering,UG,B.Tech,Aerospace Engineering,4 Years,Full-Time,1500000,375000,10+2 with PCM and SRMJEEE,SRMJEEE,60,2026-05-30
+amity-noida,B.Tech in Biotechnology,Engineering,UG,B.Tech,Biotechnology,4 Years,Full-Time,1280000,320000,10+2 with 60% in PCM/PCB,Amity JEE / JEE Main,120,2026-06-30
+sharda-university,B.Tech in Computer Science (AI & ML),Engineering,UG,B.Tech,AI & ML,4 Years,Full-Time,880000,220000,10+2 with 60% in PCM and SUAT/JEE Main,SUAT / JEE Main,180,2026-07-15
+lpu,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,960000,240000,10+2 with 60% aggregate in PCM and LPUNEST,LPUNEST,1500,2026-07-25
+chandigarh-university,B.E. in Computer Science and Engineering,Engineering,UG,B.E.,Computer Science,4 Years,Full-Time,1000000,250000,10+2 with 60% marks in PCM and CUCET,CUCET,1200,2026-07-20
+bennett-university,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,1600000,400000,10+2 with 60% aggregate in PCM or SAT/ACT score,JEE Main / SAT,600,2026-07-15
+graphic-era,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,1200000,300000,10+2 with 70% in PCM,JEE Main / Merit,480,2026-07-10
+galgotias-university,B.Tech in Computer Science and Engineering,Engineering,UG,B.Tech,Computer Science,4 Years,Full-Time,636000,159000,10+2 with 50% in PCM and JEE Main/UPTAC,JEE Main / UPTAC,900,2026-07-20

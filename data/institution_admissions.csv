@@ -1,0 +1,21 @@
+institution_slug,admission_process,selection_criteria,entrance_exams,cutoff_info,application_mode,counselling_process
+iit-delhi,Admissions are strictly based on national entrance exams followed by centralized counseling.,JEE Advanced score for B.Tech; GATE score for M.Tech.,JEE Advanced; GATE; JAM,JEE Advanced opening rank around 100 for CSE; closing around 4000 for other branches.,Online,JoSAA Counseling
+iit-bombay,Admissions are based on entrance exams and central online counseling.,JEE Advanced rank list for B.Tech; CAT score for MBA.,JEE Advanced; GATE; CEED; CAT,JEE Advanced CSE cutoff around 60.,Online,JoSAA Counseling
+iit-madras,Admissions managed via central systems based on scores.,JEE Advanced rank for B.Tech.,JEE Advanced; GATE,JEE Advanced CSE cutoff around 140.,Online,JoSAA Counseling
+iim-ahmedabad,Multi-stage admission process including CAT score; shortlisting; and analytical writing test & personal interview (AWT-PI).,CAT score + academic profile + AWT-PI performance.,CAT,CAT percentile cutoff around 99+.,Online,Direct IIM Admissions
+aiims-delhi,Admissions are based on NEET UG and NEET PG scores.,NEET score and qualification rank.,NEET UG; NEET PG,NEET UG closing rank under 50 for General category.,Online,MCC Counselling
+delhi-university,Admissions for UG are conducted via CUET UG exam. PG is via CUET PG.,CUET scores and category reservations.,CUET UG; CUET PG,CUET score requirement generally 98-99+ percentile for top colleges.,Online,CSAS Portal Counselling
+bhu,Admissions are through CUET for both UG and PG programmes.,CUET scores and academic eligibility.,CUET UG; CUET PG,Varies by course; generally high percentile.,Online,BHU Counselling Portal
+bits-pilani,Admissions are based on BITSAT merit list. No board toppers can direct admit.,BITSAT score + 12th board marks.,BITSAT,BITSAT cutoff around 320+ out of 390 for CS.,Online,BITS Direct Counseling
+manipal-academy,Admissions via Manipal Entrance Test (MET) and qualifying examinations.,MET score + academic merit.,MET; NEET; National Level Exams,MET rank under 1000 for top CS courses.,Online,Manipal Counselling
+jnu,Admissions are based on CUET scores followed by university registration.,CUET merit score.,CUET UG; CUET PG; JNUEE,High merit cutoffs based on limited seat capacity.,Online,JNU Admission Portal
+nit-trichy,Admissions are based on JEE Main scores followed by CSAB/JoSAA.,JEE Main rank.,JEE Main; GATE,JEE Main CSE cutoff around 1000-1500.,Online,JoSAA/CSAB Counseling
+vit-vellore,Admissions are based on VITEEE rank followed by online counseling.,VITEEE score and ranking list.,VITEEE; VITMEE,VITEEE Category 1 cutoff is under rank 1000 for CSE.,Online,VIT Counselling
+srm-chennai,Admissions are through SRMJEEE exam merit list.,SRMJEEE score and category choices.,SRMJEEE; JEE Main,High ranks get preferred branches.,Online,SRM Counselling
+amity-noida,Direct admission based on 10+2 marks for select courses; otherwise entrance exam.,12th percentage or entrance score + interview.,Amity JEE; JEE Main; CAT; MAT,N/A,Online,Amity Counselling Process
+sharda-university,Admissions via Sharda University Admission Test (SUAT) or national exams.,SUAT score or national level exam scores + interview.,SUAT; JEE Main; NEET; CLAT,N/A,Online,Sharda Admission Portal
+lpu,Admissions are via LPUNEST or national exams followed by counseling.,LPUNEST score or JEE Main / NEET scores.,LPUNEST; JEE Main; NEET; CAT,LPUNEST percentile > 60% for scholarship.,Online,LPUNEST Counselling
+chandigarh-university,Admissions are based on CUCET score and 12th board aggregate.,CUCET score or national entrance exams.,CUCET; JEE Main; CAT,N/A,Online,CUCET Admission Desk
+bennett-university,Admissions based on 12th PCM aggregate or JEE Main percentile.,Academic merit or national test scores.,JEE Main; SAT; CUET,JEE Main percentile > 70% or 12th PCM > 60%.,Online,Bennett Counselling Cell
+graphic-era,Admissions are based on 12th merit score and JEE Main ranks.,Merit list based on 12th marks or JEE.,JEE Main,N/A,Online,Direct Counseling
+galgotias-university,Admissions through UPSEE/UPTAC counselling or direct merit selection.,12th board aggregate or JEE Main rank.,JEE Main; CUET; UPTAC,N/A,Online,UPTAC Counselling / Direct

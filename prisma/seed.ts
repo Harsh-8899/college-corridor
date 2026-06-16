@@ -124,30 +124,24 @@ async function main() {
   const institution = await prisma.institution.upsert({
     where: { slug: "greenwood-institute-of-technology" },
     update: {
-      status: "PUBLISHED",
+      published: true,
       categories: { connect: [{ id: categories["offline-colleges"].id }] }
     },
     create: {
       name: "Greenwood Institute of Technology",
       slug: "greenwood-institute-of-technology",
       type: "COLLEGE",
-      shortDescription: "Technology-focused college with strong placement outcomes.",
-      fullDescription: "Greenwood Institute is a premier technology institution located in Bengaluru offering state-of-the-art engineering degrees.",
-      country: "India",
+      ownership: "Private",
+      description: "Greenwood Institute is a premier technology institution located in Bengaluru offering state-of-the-art engineering degrees.",
       state: "Karnataka",
       city: "Bengaluru",
       address: "Outer Ring Road, Marathahalli",
-      websiteUrl: "https://greenwood.edu",
-      approvalAccreditation: ["AICTE Approved", "NAAC A+ accredited"],
-      ranking: { nirf: 45, careers360: "AAAA" },
-      admissionProcess: "Admissions are based strictly on JEE Main scores followed by single-window online counseling.",
-      eligibility: "10+2 with Physics, Chemistry, and Mathematics (PCM) and at least 60% aggregate.",
-      scholarships: "Up to 50% tuition waiver for top 100 entrance rank holders.",
-      faqs: [
-        { q: "Is there a hostel?", a: "Yes, fully functional boys and girls hostels are available on campus." },
-        { q: "What is the average package?", a: "The average placement package for CSE is 9.2 LPA." }
-      ],
-      status: "PUBLISHED",
+      website: "https://greenwood.edu",
+      approval: "AICTE Approved",
+      establishedYear: 2012,
+      campusSize: "45 Acres",
+      genderAccepted: "Co-Ed",
+      published: true,
       categories: { connect: [{ id: categories["offline-colleges"].id }] }
     }
   });

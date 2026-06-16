@@ -223,31 +223,48 @@ model StaffProfile {
 
 model Institution {
   id                    String            @id @default(cuid())
+  institutionId         String?
+  aisheCode             String?           @unique
   name                  String
   slug                  String            @unique
+  shortName             String?
   type                  String            @default("COLLEGE") // COLLEGE, UNIVERSITY, INSTITUTE, PLATFORM
-  logo                  String?
-  coverImage            String?
-  gallery               String[]
-  shortDescription      String?
-  fullDescription       String?           @db.Text
-  country               String            @default("India")
-  state                 String?
-  city                  String?
+  ownership             String
+  approval              String?
+  affiliation           String?
+  establishedYear       Int?
+  campusSize            String?
+  genderAccepted        String?
+  state                 String
+  city                  String
+  district              String?
   address               String?
-  websiteUrl            String?
-  approvalAccreditation String[]
-  ranking               Json?
-  admissionProcess      String?           @db.Text
-  eligibility           String?           @db.Text
-  scholarships          String?           @db.Text
-  faqs                  Json?
-  status                PublishStatus     @default(DRAFT)
-  
-  seoTitle              String?
-  seoDescription        String?
-  seoKeywords           String[]
+  pincode               String?
+  website               String?
+  email                 String?
+  phone                 String?
+  logoUrl               String?
+  imageUrl              String?
+  brochureUrl           String?
+  description           String?           @db.Text
+  verificationStatus    String?           @default("PENDING")
+  sourceName            String?
+  sourceUrl             String?
+  published             Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
+  // Relationships
+  courses              InstitutionCourse[]
+  placements           InstitutionPlacement[]
+  rankings             InstitutionRanking[]
+  admissions           InstitutionAdmission[]
+  reviewSummaries      InstitutionReviewSummary[]
+  facilities           InstitutionFacility[]
+  scholarships         InstitutionScholarship[]
+  seo                  InstitutionSeo[]
+
+  // Existing relations to keep the application integrated
   categories            Category[]
   programs              Program[]
   customValues          CustomFieldValue[]
@@ -258,11 +275,14 @@ model Institution {
   applications          Application[]
   universityId          String?
   university            University?       @relation(fields: [universityId], references: [id], onDelete: SetNull)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
 
   @@index([name])
-  @@index([status])
+  @@index([slug])
+  @@index([aisheCode])
+  @@index([state])
+  @@index([city])
+  @@index([ownership])
+  @@index([type])
 }
 
 model Program {
@@ -754,4 +774,158 @@ model UniversityPartner {
   
   user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   university      University  @relation(fields: [universityId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionCourse {
+  id                  String      @id @default(cuid())
+  institutionId       String
+  courseName          String
+  stream              String
+  level               String
+  degree              String
+  specialization      String?
+  duration            String?
+  mode                String?
+  totalFees           String?
+  yearlyFees          String?
+  eligibility         String?     @db.Text
+  examsAccepted       String?
+  seats               String?
+  applicationDeadline String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  institution         Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionPlacement {
+  id                   String      @id @default(cuid())
+  institutionId        String
+  placementYear        Int?
+  highestPackage       String?
+  averagePackage       String?
+  medianPackage        String?
+  placementPercentage  String?
+  topRecruiters        String?     @db.Text
+  internshipOffered    String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  institution          Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionRanking {
+  id             String      @id @default(cuid())
+  institutionId  String
+  nirfRank       String?
+  nirfCategory   String?
+  nirfScore      String?
+  rankingYear    Int?
+  otherRanking   String?     @db.Text
+  rankingSource  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionAdmission {
+  id                 String      @id @default(cuid())
+  institutionId      String
+  admissionProcess   String?     @db.Text
+  selectionCriteria  String?     @db.Text
+  entranceExams      String?
+  cutoffInfo         String?     @db.Text
+  applicationMode    String?
+  counsellingProcess String?     @db.Text
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  institution        Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionReviewSummary {
+  id                   String      @id @default(cuid())
+  institutionId        String
+  overallRating        String?
+  academicRating       String?
+  placementRating      String?
+  infrastructureRating String?
+  facultyRating        String?
+  hostelRating         String?
+  reviewCount          String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  institution          Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionFacility {
+  id             String      @id @default(cuid())
+  institutionId  String
+  hostel         String?
+  library        String?
+  sports         String?
+  labs           String?
+  medical        String?
+  cafeteria      String?
+  wifi           String?
+  transport      String?
+  auditorium     String?
+  gym            String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionScholarship {
+  id                   String      @id @default(cuid())
+  institutionId        String
+  scholarshipAvailable String?
+  scholarshipDetails   String?     @db.Text
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  institution          Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionSeo {
+  id                 String      @id @default(cuid())
+  institutionId      String
+  metaTitle          String?
+  metaDescription    String?
+  faqJson            Json?
+  highlightsJson     Json?
+  importantDatesJson Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  institution        Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+}
+
+model InstitutionImportBatch {
+  id          String                 @id @default(cuid())
+  fileName    String
+  sourceName  String
+  totalRows   Int                    @default(0)
+  createdRows Int                    @default(0)
+  updatedRows Int                    @default(0)
+  skippedRows Int                    @default(0)
+  errorRows   Int                    @default(0)
+  status      String                 @default("STARTED") // STARTED, COMPLETED, FAILED
+  startedAt   DateTime               @default(now())
+  completedAt DateTime?
+  errors      InstitutionImportError[]
+}
+
+model InstitutionImportError {
+  id           String                 @id @default(cuid())
+  batchId      String
+  rowNumber    Int
+  rawData      String                 @db.Text
+  errorMessage String                 @db.Text
+  createdAt    DateTime               @default(now())
+
+  batch        InstitutionImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 }

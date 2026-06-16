@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { prisma } from "@/lib/db/prisma";
-import { Prisma } from "@prisma/client";
 
 export type College = {
   id: string;
@@ -8,7 +7,7 @@ export type College = {
   name: string;
   city: string;
   state: string;
-  ownership: "Government" | "Private" | "Deemed";
+  ownership: string;
   ranking: number;
   rating: number;
   courses: string[];
@@ -23,108 +22,224 @@ export type College = {
   eligibility: string;
   admission: string;
   description: string;
+
+  // Expanded Fields
+  aisheCode?: string;
+  shortName?: string;
+  type?: string;
+  approval?: string;
+  affiliation?: string;
+  establishedYear?: number;
+  campusSize?: string;
+  genderAccepted?: string;
+  address?: string;
+  pincode?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  logoUrl?: string;
+  imageUrl?: string;
+  brochureUrl?: string;
+  verificationStatus?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  published?: boolean;
+
+  // Related placements / rankings / admissions / SEO
+  topRecruiters?: string;
+  nirfCategory?: string;
+  nirfScore?: string;
+  otherRanking?: string;
+  rankingSource?: string;
+  selectionCriteria?: string;
+  entranceExams?: string;
+  cutoffInfo?: string;
+  applicationMode?: string;
+  counsellingProcess?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  faqJson?: any;
+  highlightsJson?: any;
+  importantDatesJson?: any;
 };
 
-// Helper: parse custom field JSON value
-function getFieldValueString(val: any): string {
-  if (val === null || val === undefined) return "N/A";
-  if (Array.isArray(val)) return val.join(", ");
-  return String(val);
-}
-
-// Convert dynamic Institution and Programs to flat College model
+// Convert dynamic Institution and relation models to flat College model
 export async function mapInstitutionToCollege(inst: any): Promise<College> {
-  // Extract custom fields values
-  const valuesMap: Record<string, any> = {};
-  if (inst.customValues) {
-    for (const cv of inst.customValues) {
-      if (cv.fieldDefinition) {
-        valuesMap[cv.fieldDefinition.key] = cv.value;
-      }
+  // Extract ranking
+  let rankingVal = 0;
+  let nirfCat = "N/A";
+  let nirfSc = "N/A";
+  let otherRank = "N/A";
+  let rankSrc = "N/A";
+
+  if (inst.rankings && inst.rankings.length > 0) {
+    const r = inst.rankings[0];
+    if (r.nirfRank && r.nirfRank !== "N/A") {
+      rankingVal = Number(r.nirfRank) || 0;
+    }
+    nirfCat = r.nirfCategory || "N/A";
+    nirfSc = r.nirfScore || "N/A";
+    otherRank = r.otherRanking || "N/A";
+    rankSrc = r.rankingSource || "N/A";
+  }
+
+  // Extract rating
+  let ratingVal = 4.5;
+  if (inst.reviewSummaries && inst.reviewSummaries.length > 0) {
+    const ratingStr = inst.reviewSummaries[0].overallRating;
+    if (ratingStr && ratingStr !== "N/A") {
+      ratingVal = Number(ratingStr) || 4.5;
     }
   }
 
-  // Parse courses & modes from Programs
+  // Extract courses & modes
   const coursesList: string[] = [];
   const modesSet = new Set<"Online" | "Offline" | "Distance">();
   
-  if (inst.programs) {
-    for (const prog of inst.programs) {
-      coursesList.push(prog.name);
-      
-      // Map category relations to modes
-      if (prog.categories) {
-        for (const cat of prog.categories) {
-          if (cat.slug.includes("online")) modesSet.add("Online");
-          else if (cat.slug.includes("offline")) modesSet.add("Offline");
-          else if (cat.slug.includes("distance")) modesSet.add("Distance");
-        }
-      }
+  if (inst.courses) {
+    for (const course of inst.courses) {
+      coursesList.push(course.courseName);
+      const m = course.mode || "Offline";
+      if (m.includes("Online")) modesSet.add("Online");
+      else if (m.includes("Distance")) modesSet.add("Distance");
+      else modesSet.add("Offline");
     }
   }
 
-  // Fallback modes if empty
   if (modesSet.size === 0) {
     modesSet.add("Offline");
   }
 
-  // Extract ranking
-  let rankingVal = 0;
-  if (inst.ranking && typeof inst.ranking === "object") {
-    rankingVal = Number((inst.ranking as any).nirf || (inst.ranking as any).rank || 0);
+  // Extract fees
+  let feesStr = "N/A";
+  if (inst.courses && inst.courses.length > 0) {
+    const firstCourse = inst.courses[0];
+    if (firstCourse.totalFees && firstCourse.totalFees !== "N/A") {
+      feesStr = firstCourse.totalFees;
+    } else if (firstCourse.yearlyFees && firstCourse.yearlyFees !== "N/A") {
+      feesStr = `${firstCourse.yearlyFees}/Yr`;
+    }
   }
 
-  // Map fees string
-  let feesStr = "N/A";
-  if (inst.programs && inst.programs.length > 0) {
-    const firstProg = inst.programs[0];
-    if (firstProg.fees && typeof firstProg.fees === "object") {
-      const total = (firstProg.fees as any).total || (firstProg.fees as any).tuition;
-      if (total) {
-        feesStr = `INR ${(Number(total) / 100000).toFixed(1)}L`;
+  // Placements
+  const placementObj = inst.placements?.[0];
+  const avgSal = placementObj?.averagePackage || "N/A";
+  const highSal = placementObj?.highestPackage || "N/A";
+  const placeRate = placementObj?.placementPercentage || "N/A";
+  const recruiters = placementObj?.topRecruiters || "N/A";
+
+  // Seats
+  let totalSeats = 0;
+  if (inst.courses && inst.courses.length > 0) {
+    for (const c of inst.courses) {
+      if (c.seats && c.seats !== "N/A") {
+        totalSeats += Number(c.seats) || 0;
       }
     }
   }
+  if (totalSeats === 0) totalSeats = 180; // fallback
+
+  // Hostel & Facilities
+  const facilityObj = inst.facilities?.[0];
+  const hostelStr = facilityObj?.hostel || "N/A";
+
+  // Scholarships
+  const scholarshipObj = inst.scholarships?.[0];
+  const scholarshipStr = scholarshipObj?.scholarshipDetails || "N/A";
+
+  // Eligibility
+  const eligibilityStr = inst.courses?.[0]?.eligibility || "N/A";
+
+  // Admission Process
+  const admissionObj = inst.admissions?.[0];
+  const admissionStr = admissionObj?.admissionProcess || "N/A";
+  const selCriteria = admissionObj?.selectionCriteria || "N/A";
+  const entExams = admissionObj?.entranceExams || "N/A";
+  const cutInfo = admissionObj?.cutoffInfo || "N/A";
+  const appMode = admissionObj?.applicationMode || "N/A";
+  const counselProc = admissionObj?.counsellingProcess || "N/A";
+
+  // SEO Info
+  const seoObj = inst.seo?.[0];
+  const mTitle = seoObj?.metaTitle || "N/A";
+  const mDesc = seoObj?.metaDescription || "N/A";
+  const fJson = seoObj?.faqJson || [];
+  const hJson = seoObj?.highlightsJson || [];
+  const dJson = seoObj?.importantDatesJson || [];
 
   return {
     id: inst.id,
     slug: inst.slug,
     name: inst.name,
-    city: inst.city || "",
-    state: inst.state || "",
-    ownership: inst.type === "UNIVERSITY" ? "Deemed" : "Private", // fallback classification
+    city: inst.city || "N/A",
+    state: inst.state || "N/A",
+    ownership: inst.ownership || "N/A",
     ranking: rankingVal,
-    rating: 4.5, // Seed rating
-    courses: coursesList.length > 0 ? coursesList : ["B.Tech Computer Science"],
+    rating: ratingVal,
+    courses: coursesList.length > 0 ? coursesList : [],
     modes: Array.from(modesSet),
     fees: feesStr,
-    averageSalary: getFieldValueString(valuesMap["avg_package"] ? `INR ${(Number(valuesMap["avg_package"]) / 100000).toFixed(1)} LPA` : "N/A"),
-    highestSalary: getFieldValueString(valuesMap["highest_package"] ? `INR ${(Number(valuesMap["highest_package"]) / 100000).toFixed(1)} LPA` : "N/A"),
-    placementRate: getFieldValueString(valuesMap["placement_rate"] ? `${valuesMap["placement_rate"]}%` : "91%"),
-    seats: 240,
-    hostel: getFieldValueString(valuesMap["hostel_available"] || "Yes"),
-    scholarships: inst.scholarships || "Scholarships available",
-    eligibility: inst.eligibility || "Contact admissions",
-    admission: inst.admissionProcess || "Entrance based",
-    description: inst.fullDescription || inst.shortDescription || ""
+    averageSalary: avgSal,
+    highestSalary: highSal,
+    placementRate: placeRate,
+    seats: totalSeats,
+    hostel: hostelStr,
+    scholarships: scholarshipStr,
+    eligibility: eligibilityStr,
+    admission: admissionStr,
+    description: inst.description || "N/A",
+
+    // Expanded properties mapped
+    aisheCode: inst.aisheCode || "N/A",
+    shortName: inst.shortName || "N/A",
+    type: inst.type || "COLLEGE",
+    approval: inst.approval || "N/A",
+    affiliation: inst.affiliation || "N/A",
+    establishedYear: inst.establishedYear || undefined,
+    campusSize: inst.campusSize || "N/A",
+    genderAccepted: inst.genderAccepted || "N/A",
+    address: inst.address || "N/A",
+    pincode: inst.pincode || "N/A",
+    website: inst.website || "N/A",
+    email: inst.email || "N/A",
+    phone: inst.phone || "N/A",
+    logoUrl: inst.logoUrl || "N/A",
+    imageUrl: inst.imageUrl || "N/A",
+    brochureUrl: inst.brochureUrl || "N/A",
+    verificationStatus: inst.verificationStatus || "PENDING",
+    sourceName: inst.sourceName || "N/A",
+    sourceUrl: inst.sourceUrl || "N/A",
+    published: inst.published,
+
+    topRecruiters: recruiters,
+    nirfCategory: nirfCat,
+    nirfScore: nirfSc,
+    otherRanking: otherRank,
+    rankingSource: rankSrc,
+    selectionCriteria: selCriteria,
+    entranceExams: entExams,
+    cutoffInfo: cutInfo,
+    applicationMode: appMode,
+    counsellingProcess: counselProc,
+    metaTitle: mTitle,
+    metaDescription: mDesc,
+    faqJson: fJson,
+    highlightsJson: hJson,
+    importantDatesJson: dJson
   };
 }
 
 export async function getColleges(): Promise<College[]> {
   const dbInstitutions = await prisma.institution.findMany({
-    where: { status: "PUBLISHED" },
     include: {
-      categories: true,
-      programs: {
-        include: {
-          categories: true
-        }
-      },
-      customValues: {
-        include: {
-          fieldDefinition: true
-        }
-      }
+      courses: true,
+      placements: true,
+      rankings: true,
+      admissions: true,
+      reviewSummaries: true,
+      facilities: true,
+      scholarships: true,
+      seo: true
     },
     orderBy: { createdAt: "desc" }
   });
@@ -140,17 +255,14 @@ export async function getCollege(slug: string): Promise<College | undefined> {
   const inst = await prisma.institution.findUnique({
     where: { slug },
     include: {
-      categories: true,
-      programs: {
-        include: {
-          categories: true
-        }
-      },
-      customValues: {
-        include: {
-          fieldDefinition: true
-        }
-      }
+      courses: true,
+      placements: true,
+      rankings: true,
+      admissions: true,
+      reviewSummaries: true,
+      facilities: true,
+      scholarships: true,
+      seo: true
     }
   });
 
@@ -162,17 +274,14 @@ export async function getCollegeById(id: string): Promise<College | undefined> {
   const inst = await prisma.institution.findUnique({
     where: { id },
     include: {
-      categories: true,
-      programs: {
-        include: {
-          categories: true
-        }
-      },
-      customValues: {
-        include: {
-          fieldDefinition: true
-        }
-      }
+      courses: true,
+      placements: true,
+      rankings: true,
+      admissions: true,
+      reviewSummaries: true,
+      facilities: true,
+      scholarships: true,
+      seo: true
     }
   });
 
@@ -181,20 +290,7 @@ export async function getCollegeById(id: string): Promise<College | undefined> {
 }
 
 export async function addCollege(college: College): Promise<College> {
-  const categorySlug = college.modes.includes("Online") 
-    ? "online-programs" 
-    : "offline-colleges";
-  
-  // Find Category in DB
-  let category = await prisma.category.findUnique({ where: { slug: categorySlug } });
-  if (!category) {
-    category = await prisma.category.create({
-      data: {
-        name: categorySlug === "online-programs" ? "Online Programs" : "Offline Colleges",
-        slug: categorySlug
-      }
-    });
-  }
+  const cleanAisheCode = (college.aisheCode === "N/A" || !college.aisheCode) ? null : college.aisheCode;
 
   // 1. Create/Update Institution
   const inst = await prisma.institution.upsert({
@@ -202,91 +298,162 @@ export async function addCollege(college: College): Promise<College> {
     update: {
       name: college.name,
       slug: college.slug,
-      fullDescription: college.description,
       city: college.city,
       state: college.state,
-      admissionProcess: college.admission,
-      eligibility: college.eligibility,
-      scholarships: college.scholarships,
-      ranking: { nirf: college.ranking },
-      status: "PUBLISHED",
-      categories: {
-        connect: [{ id: category.id }]
-      }
+      ownership: college.ownership,
+      description: college.description,
+      aisheCode: cleanAisheCode,
+      shortName: college.shortName || "N/A",
+      type: college.type || "COLLEGE",
+      approval: college.approval || "N/A",
+      affiliation: college.affiliation || "N/A",
+      establishedYear: college.establishedYear || null,
+      campusSize: college.campusSize || "N/A",
+      genderAccepted: college.genderAccepted || "N/A",
+      address: college.address || "N/A",
+      pincode: college.pincode || "N/A",
+      website: college.website || "N/A",
+      email: college.email || "N/A",
+      phone: college.phone || "N/A",
+      logoUrl: college.logoUrl || "N/A",
+      imageUrl: college.imageUrl || "N/A",
+      brochureUrl: college.brochureUrl || "N/A",
+      verificationStatus: college.verificationStatus || "PENDING",
+      sourceName: college.sourceName || "N/A",
+      sourceUrl: college.sourceUrl || "N/A",
+      published: college.published !== undefined ? college.published : true
     },
     create: {
       id: college.id,
       name: college.name,
       slug: college.slug,
-      type: college.ownership === "Deemed" ? "UNIVERSITY" : "COLLEGE",
-      fullDescription: college.description,
       city: college.city,
       state: college.state,
-      admissionProcess: college.admission,
-      eligibility: college.eligibility,
-      scholarships: college.scholarships,
-      ranking: { nirf: college.ranking },
-      status: "PUBLISHED",
-      categories: {
-        connect: [{ id: category.id }]
-      }
+      ownership: college.ownership,
+      description: college.description,
+      aisheCode: cleanAisheCode,
+      shortName: college.shortName || "N/A",
+      type: college.type || "COLLEGE",
+      approval: college.approval || "N/A",
+      affiliation: college.affiliation || "N/A",
+      establishedYear: college.establishedYear || null,
+      campusSize: college.campusSize || "N/A",
+      genderAccepted: college.genderAccepted || "N/A",
+      address: college.address || "N/A",
+      pincode: college.pincode || "N/A",
+      website: college.website || "N/A",
+      email: college.email || "N/A",
+      phone: college.phone || "N/A",
+      logoUrl: college.logoUrl || "N/A",
+      imageUrl: college.imageUrl || "N/A",
+      brochureUrl: college.brochureUrl || "N/A",
+      verificationStatus: college.verificationStatus || "PENDING",
+      sourceName: college.sourceName || "N/A",
+      sourceUrl: college.sourceUrl || "N/A",
+      published: college.published !== undefined ? college.published : true
     }
   });
 
-  // 2. Create/Update Related Programs
+  // 2. Create/Update Courses
   if (college.courses && college.courses.length > 0) {
+    await prisma.institutionCourse.deleteMany({ where: { institutionId: inst.id } });
     for (const courseName of college.courses) {
-      const courseSlug = `${college.slug}-${courseName.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-")}`;
-      await prisma.program.upsert({
-        where: { slug: courseSlug },
-        update: {
-          name: courseName,
-          status: "PUBLISHED"
-        },
-        create: {
-          name: courseName,
-          slug: courseSlug,
+      await prisma.institutionCourse.create({
+        data: {
           institutionId: inst.id,
-          status: "PUBLISHED",
-          categories: {
-            connect: [{ id: category.id }]
-          }
+          courseName,
+          stream: "Engineering", // default fallback
+          level: "UG",
+          degree: "B.Tech",
+          specialization: "General",
+          duration: "4 Years",
+          mode: college.modes?.[0] || "Offline",
+          totalFees: college.fees,
+          eligibility: college.eligibility,
+          seats: String(college.seats)
         }
       });
     }
   }
 
-  // 3. Save Custom Dynamic Fields Values
-  const fields = [
-    { key: "hostel_available", value: college.hostel },
-    { key: "avg_package", value: parseInt(college.averageSalary.replace(/[^0-9]/g, "")) || 400000 },
-    { key: "highest_package", value: parseInt(college.highestSalary.replace(/[^0-9]/g, "")) || 1200000 }
-  ];
-
-  for (const f of fields) {
-    const fieldDef = await prisma.customFieldDefinition.findFirst({
-      where: { key: f.key }
-    });
-
-    if (fieldDef) {
-      await prisma.customFieldValue.upsert({
-        where: {
-          institutionId_fieldDefinitionId: {
-            institutionId: inst.id,
-            fieldDefinitionId: fieldDef.id
-          }
-        },
-        update: {
-          value: f.value as Prisma.InputJsonValue
-        },
-        create: {
-          institutionId: inst.id,
-          fieldDefinitionId: fieldDef.id,
-          value: f.value as Prisma.InputJsonValue
-        }
-      });
+  // 3. Create/Update Placements
+  await prisma.institutionPlacement.deleteMany({ where: { institutionId: inst.id } });
+  await prisma.institutionPlacement.create({
+    data: {
+      institutionId: inst.id,
+      placementYear: new Date().getFullYear() - 1,
+      averagePackage: college.averageSalary,
+      highestPackage: college.highestSalary,
+      placementPercentage: college.placementRate,
+      topRecruiters: college.topRecruiters || "N/A"
     }
-  }
+  });
+
+  // 4. Create/Update Rankings
+  await prisma.institutionRanking.deleteMany({ where: { institutionId: inst.id } });
+  await prisma.institutionRanking.create({
+    data: {
+      institutionId: inst.id,
+      nirfRank: String(college.ranking),
+      nirfCategory: college.nirfCategory || "N/A",
+      nirfScore: college.nirfScore || "N/A",
+      otherRanking: college.otherRanking || "N/A",
+      rankingSource: college.rankingSource || "N/A",
+      rankingYear: new Date().getFullYear() - 1
+    }
+  });
+
+  // 5. Create/Update Admissions
+  await prisma.institutionAdmission.deleteMany({ where: { institutionId: inst.id } });
+  await prisma.institutionAdmission.create({
+    data: {
+      institutionId: inst.id,
+      admissionProcess: college.admission,
+      selectionCriteria: college.selectionCriteria || "N/A",
+      entranceExams: college.entranceExams || "N/A",
+      cutoffInfo: college.cutoffInfo || "N/A",
+      applicationMode: college.applicationMode || "N/A",
+      counsellingProcess: college.counsellingProcess || "N/A"
+    }
+  });
+
+  // 6. Create/Update Facilities
+  await prisma.institutionFacility.deleteMany({ where: { institutionId: inst.id } });
+  await prisma.institutionFacility.create({
+    data: {
+      institutionId: inst.id,
+      hostel: college.hostel,
+      library: "Yes",
+      sports: "Yes",
+      labs: "Yes",
+      medical: "Yes",
+      cafeteria: "Yes",
+      wifi: "Yes"
+    }
+  });
+
+  // 7. Create/Update Scholarships
+  await prisma.institutionScholarship.deleteMany({ where: { institutionId: inst.id } });
+  await prisma.institutionScholarship.create({
+    data: {
+      institutionId: inst.id,
+      scholarshipAvailable: "Yes",
+      scholarshipDetails: college.scholarships
+    }
+  });
+
+  // 8. Create/Update SEO details
+  await prisma.institutionSeo.deleteMany({ where: { institutionId: inst.id } });
+  await prisma.institutionSeo.create({
+    data: {
+      institutionId: inst.id,
+      metaTitle: college.metaTitle || college.name,
+      metaDescription: college.metaDescription || college.description,
+      faqJson: college.faqJson || [],
+      highlightsJson: college.highlightsJson || [],
+      importantDatesJson: college.importantDatesJson || []
+    }
+  });
 
   return college;
 }
@@ -303,8 +470,6 @@ export async function updateCollege(id: string, updates: Partial<College>): Prom
 
 export async function deleteCollege(id: string): Promise<boolean> {
   try {
-    await prisma.program.deleteMany({ where: { institutionId: id } });
-    await prisma.customFieldValue.deleteMany({ where: { institutionId: id } });
     await prisma.institution.delete({ where: { id } });
     return true;
   } catch (error) {

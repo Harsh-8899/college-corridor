@@ -25,6 +25,7 @@ export default async function InternalLayout({ children }: Readonly<{ children: 
 
   if (role === "ADMIN" || role === "EDITOR") {
     sidebarItems.push({ href: "/internal/admin", label: "Dashboard", icon: LayoutDashboard });
+    sidebarItems.push({ href: "/internal/admin/institutions", label: "Institutions", icon: Building2 });
   }
 
   if (role === "ADMIN" || role === "COUNSELOR") {

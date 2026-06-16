@@ -49,14 +49,20 @@ export async function POST(request: Request) {
     });
 
     // Notify administrators of new question
-    await prisma.notification.create({
-      data: {
-        role: "ADMIN",
-        title: "New question pending approval",
-        body: `Question: "${title.substring(0, 50)}..." by ${user.name || "student"} is pending review.`,
-        href: "/admin/qa"
-      }
+    const adminRole = await prisma.role.findUnique({
+      where: { name: "ADMIN" }
     });
+
+    if (adminRole) {
+      await prisma.notification.create({
+        data: {
+          roleId: adminRole.id,
+          title: "New question pending approval",
+          body: `Question: "${title.substring(0, 50)}..." by ${user.name || "student"} is pending review.`,
+          href: "/admin/qa"
+        }
+      });
+    }
 
     // Redirect to community page
     return NextResponse.redirect(new URL("/community?submitted=1", request.url), 303);

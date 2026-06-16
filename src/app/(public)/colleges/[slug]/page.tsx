@@ -4,13 +4,35 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumGate } from "@/components/lead/premium-gate";
+import { LeadCaptureModal } from "@/components/lead/lead-capture-modal";
 import { getCollege } from "@/lib/data/colleges";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const college = await getCollege(slug);
+  if (!college) {
+    return {};
+  }
+  return {
+    title: `${college.name} - Admission, Fees, Placements & Course Details | College Corridor`,
+    description: `Discover and compare ${college.name} in ${college.city}, ${college.state}. Find detailed tuition fees range ${college.fees}, average salary ${college.averageSalary}, placement statistics, eligibility criteria, and hostel facilities.`,
+    alternates: {
+      canonical: `https://www.collegecorridor.com/colleges/${college.slug}`
+    },
+    openGraph: {
+      title: `${college.name} - Admissions 2026`,
+      description: `Detailed fee range, placements statistics and admission procedures for ${college.name}.`,
+      type: "website"
+    }
+  };
+}
 
 export default async function CollegeDetailsPage({ params }: PageProps) {
   const { slug } = await params;
@@ -20,8 +42,52 @@ export default async function CollegeDetailsPage({ params }: PageProps) {
     notFound();
   }
 
+  const orgSchema = {
+    "@context": "https://schema.org",
+    "@type": "EducationalOrganization",
+    "name": college.name,
+    "description": college.description,
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": college.city,
+      "addressRegion": college.state,
+      "addressCountry": "IN"
+    }
+  };
+
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is the fee structure?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": `The fees range for listed programs is approximately ${college.fees}.`
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is the placement?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": `The college has a placement rate of ${college.placementRate} with average package of ${college.averageSalary} and highest salary of ${college.highestSalary}.`
+        }
+      }
+    ]
+  };
+
   return (
     <div className="page-shell space-y-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <section className="rounded-lg border bg-muted/35 p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -37,8 +103,18 @@ export default async function CollegeDetailsPage({ params }: PageProps) {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button>Apply now</Button>
-            <Button variant="outline">Save college</Button>
+            <LeadCaptureModal
+              triggerLabel="Apply Now"
+              sourcePage={`/colleges/${college.slug}`}
+              contentKey="apply-now"
+              selectedCollegeIds={[college.id]}
+            />
+            <LeadCaptureModal
+              triggerLabel="Save College"
+              sourcePage={`/colleges/${college.slug}`}
+              contentKey="save-college"
+              selectedCollegeIds={[college.id]}
+            />
           </div>
         </div>
       </section>

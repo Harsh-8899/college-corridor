@@ -6,7 +6,7 @@ import { getColleges, addCollege } from "@/lib/data/colleges";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN", "EDITOR"].includes(session.user?.role as string)) {
     return NextResponse.json(
       { error: { code: "UNAUTHORIZED", message: "Admin access required." } },
       { status: 401 }
@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN", "EDITOR"].includes(session.user?.role as string)) {
     return NextResponse.json(
       { error: { code: "UNAUTHORIZED", message: "Admin access required." } },
       { status: 401 }

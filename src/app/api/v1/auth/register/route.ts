@@ -38,13 +38,24 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = bcrypt.hashSync(password, 10);
 
+    const studentRole = await prisma.role.findUnique({
+      where: { name: "STUDENT" }
+    });
+
+    if (!studentRole) {
+      return NextResponse.json(
+        { error: { message: "Internal server configuration issue. STUDENT role not found." } },
+        { status: 500 }
+      );
+    }
+
     // Create user with STUDENT role
     const user = await prisma.user.create({
       data: {
         name,
         email: email.toLowerCase(),
         password: hashedPassword,
-        role: "STUDENT"
+        roleId: studentRole.id
       }
     });
 

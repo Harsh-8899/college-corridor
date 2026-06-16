@@ -18,8 +18,10 @@ export default async function AdminUsersPage() {
   });
 
   const formattedUsers = users.map(u => ({
-    ...u,
+    id: u.id,
     name: u.name || "Anonymous",
+    email: u.email,
+    role: u.role?.name || "STUDENT",
     status: u.status || "ACTIVE"
   }));
 

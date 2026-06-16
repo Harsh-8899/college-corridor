@@ -36,13 +36,23 @@ export default async function CommunityPage({ searchParams }: PageProps) {
     },
     include: {
       user: {
-        select: { name: true, role: true }
+        select: {
+          name: true,
+          role: {
+            select: { name: true }
+          }
+        }
       },
       answers: {
         where: { isApproved: true },
         include: {
           user: {
-            select: { name: true, role: true }
+            select: {
+              name: true,
+              role: {
+                select: { name: true }
+              }
+            }
           }
         },
         orderBy: { createdAt: "asc" }
@@ -94,7 +104,7 @@ export default async function CommunityPage({ searchParams }: PageProps) {
                       <User className="h-3.5 w-3.5" />
                       <span className="font-semibold text-foreground">{q.user.name || "Anonymous student"}</span>
                       <span>·</span>
-                      <span className="capitalize">{q.user.role.toLowerCase().replace("_", " ")}</span>
+                      <span className="capitalize">{(q.user.role?.name || "STUDENT").toLowerCase().replace("_", " ")}</span>
                     </div>
                     <Badge variant="secondary" className="text-xs">
                       {q.category}
@@ -120,7 +130,7 @@ export default async function CommunityPage({ searchParams }: PageProps) {
                           <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                             <span className="font-semibold text-foreground">{ans.user.name}</span>
                             <Badge variant="outline" className="text-[10px] capitalize bg-white">
-                              {ans.user.role.toLowerCase().replace("_", " ")}
+                              {(ans.user.role?.name || "STUDENT").toLowerCase().replace("_", " ")}
                             </Badge>
                           </div>
                           <p className="text-muted-foreground leading-relaxed">

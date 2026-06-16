@@ -16,8 +16,12 @@ export default async function AdminLeadsPage() {
   const leads = await prisma.lead.findMany({
     orderBy: { createdAt: "desc" },
     include: {
-      interestedCollege: {
+      interestedInstitution: {
         select: { name: true }
+      },
+      activities: {
+        orderBy: { timestamp: "desc" },
+        take: 1
       }
     }
   });
@@ -51,7 +55,9 @@ export default async function AdminLeadsPage() {
                 <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-4">
                     <p className="font-semibold text-slate-800">{lead.fullName}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">Source: {lead.sourcePage}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Source: {lead.activities[0]?.pageUrl || lead.preferredCategory}
+                    </p>
                   </td>
                   <td className="p-4">
                     <p className="text-slate-700">{lead.email}</p>
@@ -60,18 +66,18 @@ export default async function AdminLeadsPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-1.5 text-slate-700">
                       <BookOpen className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{lead.courseInterestedIn}</span>
+                      <span>{lead.preferredCourse}</span>
                     </div>
-                    {lead.interestedCollege && (
+                    {lead.interestedInstitution && (
                       <p className="text-xs text-slate-400 mt-1 truncate max-w-[200px]">
-                        At: {lead.interestedCollege.name}
+                        At: {lead.interestedInstitution.name}
                       </p>
                     )}
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1 text-slate-500">
                       <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                      <span>{lead.city}</span>
+                      <span>{lead.currentCity}</span>
                     </div>
                   </td>
                   <td className="p-4">

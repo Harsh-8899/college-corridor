@@ -1,175 +1,203 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { Prisma, UserRole } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 
-const leadSchema = z.object({
-  fullName: z.string().min(2),
-  phone: z.string().min(7),
-  email: z.string().email(),
-  city: z.string().min(2),
-  courseInterestedIn: z.string().min(2),
-  interestedCollegeId: z.string().optional(),
-  sourcePage: z.string().min(1),
-  selectedCollegeIds: z.array(z.string()).default([]),
-  unlockedContentKeys: z.array(z.string()).default([])
+const leadCreateSchema = z.object({
+  fullName: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().min(10, "Phone number must be at least 10 characters"),
+  email: z.string().email("Invalid email address"),
+  currentCity: z.string().min(2, "Current city is required"),
+  preferredCourse: z.string().min(2, "Preferred course is required"),
+  preferredCategory: z.enum(["OFFLINE", "ONLINE", "STUDY_ABROAD", "DISTANCE"], {
+    errorMap: () => ({ message: "Preferred category must be OFFLINE, ONLINE, STUDY_ABROAD, or DISTANCE" })
+  }),
+  preferredLocation: z.string().optional(),
+  budget: z.string().optional(),
+  highestQualification: z.string().optional(),
+  interestedInstitutionId: z.string().optional(),
+  interestedProgramId: z.string().optional(),
+  
+  // Tracking
+  pageUrl: z.string().optional(),
+  ctaClicked: z.string().optional(),
+  utmSource: z.string().optional(),
+  device: z.string().optional()
 });
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const parsed = leadSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      {
-        data: null,
-        meta: {},
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Please complete all required lead fields.",
-          details: parsed.error.flatten()
-        }
-      },
-      { status: 400 }
-    );
-  }
-
   try {
+    const body = await request.json().catch(() => null);
+    const parsed = leadCreateSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          data: null,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: parsed.error.errors[0].message,
+            details: parsed.error.flatten()
+          }
+        },
+        { status: 400 }
+      );
+    }
+
     const data = parsed.data;
+    const normalizedPhone = data.phone.replace(/[\s-()]/g, "");
 
-    // 1. Calculate Priority Lead Score
-    let score = 10; // Base score
-    const course = data.courseInterestedIn.toLowerCase();
-    
-    if (course.includes("mba") || course.includes("pg") || course.includes("postgrad")) {
-      score += 20; // High value postgraduate
-    } else if (course.includes("btech") || course.includes("b.tech") || course.includes("ug") || course.includes("engineering")) {
-      score += 15;
-    } else if (course.includes("bba") || course.includes("bca") || course.includes("mca")) {
-      score += 10;
+    // 1. Strict Server-Side OTP Verification Check
+    // Verifies that a successful OTP verification occurred within the last 15 minutes
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    const otpVerified = await prisma.oTPVerification.findFirst({
+      where: {
+        phone: normalizedPhone,
+        status: "VERIFIED",
+        createdAt: { gte: fifteenMinutesAgo }
+      }
+    });
+
+    if (!otpVerified) {
+      return NextResponse.json(
+        {
+          data: null,
+          error: {
+            code: "OTP_NOT_VERIFIED",
+            message: "Mobile verification is required. Please verify with OTP before proceeding."
+          }
+        },
+        { status: 400 }
+      );
     }
 
-    if (data.city) score += 5;
-    if (data.interestedCollegeId) score += 5;
-    if (data.selectedCollegeIds && data.selectedCollegeIds.length > 0) {
-      score += 5;
-    }
+    // 2. Lead Deduplication and Upsert Logic
+    // If phone or email exists, we update the existing lead stage/history instead of creating duplicates
+    let lead = await prisma.lead.findFirst({
+      where: {
+        OR: [
+          { phone: normalizedPhone },
+          { email: data.email.toLowerCase().trim() }
+        ]
+      }
+    });
 
-    // Merge metadata
-    const finalMetadata = {
-      score,
-      scoringRules: "program-level-plus-details",
-      assignmentRule: "specialty-matched-workload-balance",
-      timestamp: new Date().toISOString()
+    const leadPayload = {
+      fullName: data.fullName,
+      phone: normalizedPhone,
+      email: data.email.toLowerCase().trim(),
+      currentCity: data.currentCity,
+      preferredCourse: data.preferredCourse,
+      preferredCategory: data.preferredCategory,
+      preferredLocation: data.preferredLocation || null,
+      budget: data.budget || null,
+      highestQualification: data.highestQualification || null,
+      interestedInstitutionId: data.interestedInstitutionId || null,
+      interestedProgramId: data.interestedProgramId || null,
+      status: "OTP_VERIFIED" as const
     };
 
-    // 2. Auto-assign Counselor based on Specialties & Workload
-    const activeCounselors = await prisma.user.findMany({
-      where: {
-        role: "COUNSELOR",
-        status: "ACTIVE"
-      },
-      include: {
-        counselorProfile: true,
-        leadsAssigned: {
-          where: {
-            status: { in: ["NEW", "ASSIGNED", "CONTACTED"] }
-          }
-        }
-      }
-    });
-
-    let assignedCounselorId: string | null = null;
-    let status: "NEW" | "ASSIGNED" = "NEW";
-
-    if (activeCounselors.length > 0) {
-      // Find specialty matches
-      const matchingCounselors = activeCounselors.filter((c) => {
-        const specialties = c.counselorProfile?.specialties || [];
-        return specialties.some((spec) =>
-          course.includes(spec.toLowerCase()) || spec.toLowerCase().includes(course)
-        );
-      });
-
-      // Sort by workload (fewest active leads first)
-      const candidates = matchingCounselors.length > 0 ? matchingCounselors : activeCounselors;
-      candidates.sort((a, b) => a.leadsAssigned.length - b.leadsAssigned.length);
-
-      const chosen = candidates[0];
-      if (chosen) {
-        assignedCounselorId = chosen.id;
-        status = "ASSIGNED";
-      }
-    }
-
-    // 3. Save Lead with Score and Assignment
-    const lead = await prisma.lead.create({
-      data: {
-        ...data,
-        status,
-        assignedCounselorId,
-        metadata: finalMetadata as Prisma.InputJsonValue
-      }
-    });
-
-    // 4. Create system notifications
-    const notifications: Array<{
-      userId?: string | null;
-      role?: UserRole | null;
-      title: string;
-      body: string;
-      href?: string | null;
-    }> = [
-      {
-        role: UserRole.ADMIN,
-        title: "New lead captured",
-        body: `${lead.fullName} requested premium access from ${lead.sourcePage}. Score: ${score}. Assigned to: ${assignedCounselorId ? "Counselor" : "Unassigned"}.`,
-        href: "/internal/admin"
-      }
-    ];
-
-    if (assignedCounselorId) {
-      notifications.push({
-        userId: assignedCounselorId,
-        title: "New lead assigned to you",
-        body: `${lead.fullName} interested in ${lead.courseInterestedIn} is assigned to you (Score: ${score}).`,
-        href: "/internal/counselor"
+    if (lead) {
+      // Update existing lead
+      lead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: leadPayload
       });
     } else {
-      notifications.push({
-        role: UserRole.COUNSELOR,
-        title: "Unassigned Lead Alert",
-        body: `${lead.fullName} is interested in ${lead.courseInterestedIn}.`,
-        href: "/internal/counselor"
+      // 3. Auto-assign Counselor based on Specialties & Workload
+      const activeCounselors = await prisma.user.findMany({
+        where: {
+          role: { name: "COUNSELOR" },
+          status: "ACTIVE"
+        },
+        include: {
+          staffProfile: true,
+          leadsAssigned: {
+            where: {
+              status: { notIn: ["ENROLLED", "LOST"] }
+            }
+          }
+        }
+      });
+
+      let assignedCounselorId: string | null = null;
+
+      if (activeCounselors.length > 0) {
+        // Filter by matching category specialty if available
+        const matchingCounselors = activeCounselors.filter((c) => {
+          const specialties = c.staffProfile?.specialties || [];
+          return specialties.some((spec) =>
+            spec.toUpperCase() === data.preferredCategory.toUpperCase()
+          );
+        });
+
+        const candidates = matchingCounselors.length > 0 ? matchingCounselors : activeCounselors;
+        // Sort by workload (fewest active leads assigned)
+        candidates.sort((a, b) => a.leadsAssigned.length - b.leadsAssigned.length);
+
+        const chosen = candidates[0];
+        if (chosen) {
+          assignedCounselorId = chosen.id;
+        }
+      }
+
+      // Create new lead record
+      lead = await prisma.lead.create({
+        data: {
+          ...leadPayload,
+          assignedCounselorId
+        }
       });
     }
 
-    await prisma.notification.createMany({
-      data: notifications
+    // 4. Record lead activity trace in LeadActivity
+    const activityDesc = data.ctaClicked 
+      ? `Clicked CTA "${data.ctaClicked}" on page ${data.pageUrl || "/"}`
+      : `Submitted lead capture form on page ${data.pageUrl || "/"}`;
+
+    await prisma.leadActivity.create({
+      data: {
+        leadId: lead.id,
+        activityType: "LEAD_CAPTURE",
+        description: activityDesc,
+        pageUrl: data.pageUrl || null,
+        ctaClicked: data.ctaClicked || null,
+        utmSource: data.utmSource || null,
+        device: data.device || null
+      }
     });
+
+    // 5. Trigger Counselor Assignment Notification
+    if (lead.assignedCounselorId) {
+      await prisma.notification.create({
+        data: {
+          userId: lead.assignedCounselorId,
+          title: "New Lead Assigned",
+          body: `${lead.fullName} (${lead.preferredCategory}) is assigned to you. Mobile: ${lead.phone}`,
+          href: `/crm/leads/${lead.id}`
+        }
+      });
+    }
 
     return NextResponse.json({
       data: {
+        success: true,
         leadId: lead.id,
-        unlocked: true,
-        assignedCounselorId,
-        score
+        assignedCounselorId: lead.assignedCounselorId,
+        status: lead.status
       },
-      meta: {},
       error: null
     });
   } catch (error) {
-    console.error("Lead creation failed", error);
+    console.error("Lead capture failed:", error);
     return NextResponse.json(
       {
         data: null,
-        meta: {},
         error: {
-          code: "LEAD_CREATE_FAILED",
-          message: "Lead could not be saved. Check PostgreSQL connection and migrations."
+          code: "DATABASE_ERROR",
+          message: "Internal server error saving lead data."
         }
       },
-      { status: 503 }
+      { status: 500 }
     );
   }
 }

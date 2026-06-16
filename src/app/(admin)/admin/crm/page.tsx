@@ -17,7 +17,7 @@ export default async function AdminCrmConsole() {
   // Fetch counselors and leads summary
   const [counselors, totalLeads, unassignedCount, assignedLeads] = await Promise.all([
     prisma.user.findMany({
-      where: { role: "COUNSELOR" },
+      where: { role: { name: "COUNSELOR" } },
       select: {
         id: true,
         name: true,
@@ -134,7 +134,7 @@ export default async function AdminCrmConsole() {
                       <p className="text-sm font-semibold text-slate-800">{lead.fullName}</p>
                       <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
                         <BookOpen className="h-3 w-3 text-slate-400" />
-                        Interested in {lead.courseInterestedIn}
+                        Interested in {lead.preferredCourse}
                       </p>
                     </div>
                     <div className="text-right">

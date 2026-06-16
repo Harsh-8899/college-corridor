@@ -32,11 +32,12 @@ export async function POST(request: Request) {
     }
 
     const user = await prisma.user.findUniqueOrThrow({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      include: { role: true }
     });
 
     // Auto-approve answer if from staff or partners
-    const isStaffOrPartner = ["ADMIN", "SUPER_ADMIN", "COUNSELOR", "UNIVERSITY_PARTNER"].includes(user.role);
+    const isStaffOrPartner = ["ADMIN", "SUPER_ADMIN", "COUNSELOR", "UNIVERSITY_PARTNER"].includes(user.role?.name || "");
     const isApproved = isStaffOrPartner;
 
     await prisma.answer.create({
@@ -50,14 +51,20 @@ export async function POST(request: Request) {
 
     if (!isApproved) {
       // Notify administrators of pending answer
-      await prisma.notification.create({
-        data: {
-          role: "ADMIN",
-          title: "New reply pending approval",
-          body: `A student answer needs moderation.`,
-          href: "/admin/qa"
-        }
+      const adminRole = await prisma.role.findUnique({
+        where: { name: "ADMIN" }
       });
+
+      if (adminRole) {
+        await prisma.notification.create({
+          data: {
+            roleId: adminRole.id,
+            title: "New reply pending approval",
+            body: `A student answer needs moderation.`,
+            href: "/admin/qa"
+          }
+        });
+      }
     }
 
     // Redirect to community page

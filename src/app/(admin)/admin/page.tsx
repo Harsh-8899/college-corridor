@@ -9,7 +9,7 @@ export default async function AdminDashboardLanding() {
   // Fetch database metrics
   const [totalUsers, totalColleges, totalLeads, totalLogs, recentLeads, recentLogs] = await Promise.all([
     prisma.user.count(),
-    prisma.college.count(),
+    prisma.institution.count(),
     prisma.lead.count(),
     prisma.auditLog.count(),
     prisma.lead.findMany({
@@ -78,7 +78,7 @@ export default async function AdminDashboardLanding() {
                     <div>
                       <p className="text-sm font-semibold text-slate-800">{lead.fullName}</p>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        {lead.city} · Interested in <span className="font-medium">{lead.courseInterestedIn}</span>
+                        {lead.currentCity} · Interested in <span className="font-medium">{lead.preferredCourse}</span>
                       </p>
                     </div>
                     <Badge className="bg-slate-100 text-slate-700 capitalize">

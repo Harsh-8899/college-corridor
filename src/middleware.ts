@@ -5,6 +5,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get("host") || "";
 
+  // 1. Non-www to www redirect (for production collegecorridor.com)
+  if (host === "collegecorridor.com") {
+    const wwwUrl = new URL(pathname, "https://www.collegecorridor.com");
+    wwwUrl.search = request.nextUrl.search;
+    return NextResponse.redirect(wwwUrl, 301);
+  }
+
   // Identify if request is on the admin subdomain
   const isAdminSubdomain = host.startsWith("admin.collegecorridor.com") || host.startsWith("admin.localhost");
 
@@ -18,11 +25,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 1. Admin Subdomain Routing
+  const response = NextResponse.next();
+
+  // 2. Admin Subdomain Routing
   if (isAdminSubdomain) {
+    // Inject noindex, nofollow headers to prevent search indexing of admin pages
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+
+    // Redirect root page on admin subdomain to internal admin dashboard
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/internal/admin", request.url));
+    }
+
     // Allow standard login page access
     if (pathname === "/login") {
-      return NextResponse.next();
+      return response;
     }
 
     const token = await getToken({
@@ -30,7 +47,8 @@ export async function middleware(request: NextRequest) {
       secret: process.env.NEXTAUTH_SECRET
     });
 
-    const isAuthorized = token && ["ADMIN", "SUPER_ADMIN"].includes(token.role || "");
+    // Valid internal roles
+    const isAuthorized = token && ["ADMIN", "SUPER_ADMIN", "MANAGEMENT", "EDITOR", "COUNSELOR", "CRM"].includes(token.role || "");
 
     if (!isAuthorized) {
       if (pathname.startsWith("/api")) {
@@ -47,22 +65,31 @@ export async function middleware(request: NextRequest) {
 
     // Permitted: API routes do not rewrite
     if (pathname.startsWith("/api")) {
-      return NextResponse.next();
+      return response;
     }
 
-    // Rewrites other paths internally (e.g. / -> /admin, /users -> /admin/users)
-    if (!pathname.startsWith("/admin")) {
+    // Rewrite standard internal requests correctly if not prefix-matched
+    if (!pathname.startsWith("/internal") && !pathname.startsWith("/login")) {
       const url = request.nextUrl.clone();
-      url.pathname = `/admin${pathname === "/" ? "" : pathname}`;
+      url.pathname = `/internal${pathname}`;
       return NextResponse.rewrite(url);
     }
 
-    return NextResponse.next();
+    return response;
   }
 
-  // 2. Public Domain Routing
-  // Block public domain from accessing admin routes casually
-  if (pathname.startsWith("/admin") || pathname === "/internal/admin" || pathname.startsWith("/internal/admin/")) {
+  // 3. Public Domain Routing (www.collegecorridor.com / localhost)
+  // Block public domain from accessing internal or admin routes
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/internal") ||
+    pathname === "/crm" ||
+    pathname.startsWith("/crm/") ||
+    pathname === "/counselor" ||
+    pathname.startsWith("/counselor/") ||
+    pathname === "/super-admin" ||
+    pathname.startsWith("/super-admin/")
+  ) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -80,60 +107,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Protect internal routes on public domain
-  if (pathname.startsWith("/internal")) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET
-    });
-
-    // Must be logged in and NOT a regular student
-    if (!token || !token.role || token.role === "STUDENT") {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
-    const role = token.role as string;
-    
-    // Admin has access to everything
-    if (role === "ADMIN" || role === "SUPER_ADMIN") {
-      return NextResponse.next();
-    }
-
-    // Editor has access to /internal/admin (redirect to / for public domain) and settings
-    if (role === "EDITOR") {
-      if (pathname.startsWith("/internal/crm") || pathname.startsWith("/internal/counselor")) {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-      return NextResponse.next();
-    }
-
-    // Counselor has access to /internal/crm, /internal/counselor, and /internal/settings
-    if (role === "COUNSELOR") {
-      if (pathname.startsWith("/internal/admin")) {
-        return NextResponse.redirect(new URL("/internal/crm", request.url));
-      }
-      return NextResponse.next();
-    }
-  }
-
-  // Protect API admin routes on public domain
-  if (pathname.startsWith("/api/v1/admin")) {
-    const token = await getToken({
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET
-    });
-
-    if (!token || !["ADMIN", "SUPER_ADMIN"].includes(token.role || "")) {
-      return NextResponse.json(
-        { error: { message: "Unauthorized. Admin access required." } },
-        { status: 401 }
-      );
-    }
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
@@ -144,3 +118,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
+

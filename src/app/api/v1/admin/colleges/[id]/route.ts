@@ -10,9 +10,9 @@ type RouteContext = {
 
 export async function GET(_request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN", "EDITOR", "COUNSELOR", "CRM"].includes(session.user?.role as string)) {
     return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Admin access required." } },
+      { error: { code: "UNAUTHORIZED", message: "Internal access required." } },
       { status: 401 }
     );
   }
@@ -31,7 +31,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PUT(request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN", "EDITOR"].includes(session.user?.role as string)) {
     return NextResponse.json(
       { error: { code: "UNAUTHORIZED", message: "Admin access required." } },
       { status: 401 }
@@ -85,9 +85,9 @@ export async function PUT(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user?.role as string)) {
     return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Admin access required." } },
+      { error: { code: "UNAUTHORIZED", message: "Admin privileges required." } },
       { status: 401 }
     );
   }

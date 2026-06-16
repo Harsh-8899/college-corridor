@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /internal/
+Disallow: /admin/
+Disallow: /crm/
+Disallow: /counselor/
+Disallow: /super-admin/
+Disallow: /partner/
+Disallow: /api/
+
+Sitemap: https://www.collegecorridor.com/sitemap.xml

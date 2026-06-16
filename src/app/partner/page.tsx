@@ -46,6 +46,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
   const user = await prisma.user.findUniqueOrThrow({
     where: { email: session.user.email },
     include: {
+      role: true,
       universityPartner: {
         include: {
           university: {
@@ -59,7 +60,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
   });
 
   // Verify authorization
-  const isAuthorized = ["UNIVERSITY_PARTNER", "ADMIN", "SUPER_ADMIN"].includes(user.role);
+  const isAuthorized = ["UNIVERSITY_PARTNER", "ADMIN", "SUPER_ADMIN"].includes(user.role?.name || "");
   if (!isAuthorized) {
     redirect("/");
   }
@@ -69,7 +70,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
   let university = partnerProfile?.university;
 
   // For testing: Admin/Super Admin can view the dashboard of the first university if they don't have a partner profile
-  if (!university && ["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+  if (!university && ["ADMIN", "SUPER_ADMIN"].includes(user.role?.name || "")) {
     const firstUni = await prisma.university.findFirst({
       include: { colleges: true }
     });
@@ -111,10 +112,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
     where: {
       AND: [
         {
-          OR: [
-            { interestedCollegeId: { in: collegeIds } },
-            { selectedCollegeIds: { hasSome: collegeIds } }
-          ]
+          interestedInstitutionId: { in: collegeIds }
         },
         searchQuery
           ? {
@@ -122,8 +120,8 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
                 { fullName: { contains: searchQuery, mode: "insensitive" } },
                 { email: { contains: searchQuery, mode: "insensitive" } },
                 { phone: { contains: searchQuery, mode: "insensitive" } },
-                { courseInterestedIn: { contains: searchQuery, mode: "insensitive" } },
-                { city: { contains: searchQuery, mode: "insensitive" } }
+                { preferredCourse: { contains: searchQuery, mode: "insensitive" } },
+                { currentCity: { contains: searchQuery, mode: "insensitive" } }
               ]
             }
           : {},
@@ -131,7 +129,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
       ]
     },
     include: {
-      interestedCollege: {
+      interestedInstitution: {
         select: { name: true }
       }
     },
@@ -142,7 +140,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
   const totalLeads = leads.length;
   const newLeads = leads.filter((l) => l.status === "NEW").length;
   const qualifiedLeads = leads.filter((l) => l.status === "QUALIFIED").length;
-  const convertedLeads = leads.filter((l) => l.status === "CONVERTED").length;
+  const convertedLeads = leads.filter((l) => l.status === "ENROLLED").length;
   const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : "0.0";
 
   return (
@@ -245,7 +243,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
                   <option value="ASSIGNED">Assigned</option>
                   <option value="CONTACTED">Contacted</option>
                   <option value="QUALIFIED">Qualified</option>
-                  <option value="CONVERTED">Converted</option>
+                  <option value="ENROLLED">Converted</option>
                   <option value="LOST">Lost</option>
                 </select>
                 <Button type="submit">
@@ -274,16 +272,16 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
                           <p className="text-xs text-muted-foreground mt-0.5">{lead.email}</p>
                         </td>
                         <td className="p-3">
-                          <p className="font-medium">{lead.courseInterestedIn}</p>
+                          <p className="font-medium">{lead.preferredCourse}</p>
                           <p className="text-[11px] text-muted-foreground truncate max-w-[180px]">
-                            {lead.interestedCollege?.name || "Multiple Selection"}
+                            {lead.interestedInstitution?.name || "Multiple Selection"}
                           </p>
                         </td>
-                        <td className="p-3 text-muted-foreground">{lead.city}</td>
+                        <td className="p-3 text-muted-foreground">{lead.currentCity}</td>
                         <td className="p-3">
                           <Badge
                             variant={
-                              lead.status === "CONVERTED"
+                              lead.status === "ENROLLED"
                                 ? "default"
                                 : lead.status === "QUALIFIED"
                                 ? "secondary"
@@ -341,7 +339,7 @@ export default async function PartnerDashboardPage({ searchParams }: PageProps) 
                     </Link>
                   </h4>
                   <p className="text-xs text-muted-foreground mt-1 capitalize">
-                    {college.ownership?.toLowerCase() || "private"} · Established {college.establishedYear || "N/A"}
+                    {college.type?.toLowerCase() || "college"} · {college.city || "India"}
                   </p>
                 </div>
               ))}

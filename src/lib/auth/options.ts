@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@collegecorridor.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
 
+
 export const authOptions: NextAuthOptions = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PrismaAdapter(prisma) as any,
@@ -29,7 +30,7 @@ export const authOptions: NextAuthOptions = {
           name: profile.name,
           email: profile.email,
           image: profile.picture,
-          role: "STUDENT" // Default role for Google sign-in
+          role: "STUDENT" // Default role string placeholder for adapter
         };
       }
     }),
@@ -49,7 +50,15 @@ export const authOptions: NextAuthOptions = {
 
         // Special case: Initial Admin Setup via ENV vars
         if (email === ADMIN_EMAIL.toLowerCase()) {
-          let admin = await prisma.user.findUnique({ where: { email } });
+          let adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
+          if (!adminRole) {
+            adminRole = await prisma.role.create({ data: { name: "ADMIN", description: "Admin with full access" } });
+          }
+
+          let admin = await prisma.user.findUnique({ 
+            where: { email },
+            include: { role: true }
+          });
           
           if (!admin) {
             // Auto-create initial admin if it doesn't exist
@@ -58,20 +67,28 @@ export const authOptions: NextAuthOptions = {
                 name: "System Admin",
                 email: email,
                 password: bcrypt.hashSync(ADMIN_PASSWORD, 10),
-                role: "ADMIN"
-              }
+                roleId: adminRole.id
+              },
+              include: { role: true }
             });
           }
 
           const isValid = bcrypt.compareSync(password, admin.password || "");
           if (isValid) {
-            return admin;
+            return {
+              id: admin.id,
+              name: admin.name,
+              email: admin.email,
+              image: admin.image,
+              role: admin.role?.name || "ADMIN"
+            };
           }
         }
 
         // Standard DB lookup
         const user = await prisma.user.findUnique({
-          where: { email }
+          where: { email },
+          include: { role: true }
         });
 
         if (!user || !user.password) {
@@ -83,11 +100,38 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        return user;
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          role: user.role?.name || "STUDENT"
+        };
       }
     })
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google") {
+        // Ensure student role is linked in the database for Google signins
+        const dbUser = await prisma.user.findUnique({
+          where: { email: user.email! },
+          include: { role: true }
+        });
+
+        if (dbUser && !dbUser.roleId) {
+          let studentRole = await prisma.role.findUnique({ where: { name: "STUDENT" } });
+          if (!studentRole) {
+            studentRole = await prisma.role.create({ data: { name: "STUDENT", description: "Default student role" } });
+          }
+          await prisma.user.update({
+            where: { id: dbUser.id },
+            data: { roleId: studentRole.id }
+          });
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;

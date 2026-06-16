@@ -29,8 +29,11 @@ export default async function AdminDashboardPage() {
       orderBy: { createdAt: "desc" }
     });
     users = dbUsers.map(u => ({
-      ...u,
-      name: u.name || ""
+      id: u.id,
+      name: u.name || "",
+      email: u.email,
+      role: u.role?.name || "STUDENT",
+      status: u.status || "ACTIVE"
     }));
   }
 

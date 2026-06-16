@@ -76,6 +76,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const roleRecord = await prisma.role.findUnique({
+      where: { name: role }
+    });
+
+    if (!roleRecord) {
+      return NextResponse.json(
+        { error: { message: `Role ${role} does not exist.` } },
+        { status: 400 }
+      );
+    }
+
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     const user = await prisma.user.create({
@@ -83,7 +94,7 @@ export async function POST(request: Request) {
         name,
         email: email.toLowerCase(),
         password: hashedPassword,
-        role
+        roleId: roleRecord.id
       },
       select: {
         id: true,

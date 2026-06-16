@@ -106,12 +106,16 @@ export function UserForm({ onSaved, onCancel }: UserFormProps) {
               id="role"
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-slate-800"
               required
             >
+              <option value="STUDENT">Student</option>
               <option value="EDITOR">Editor (Manage Colleges)</option>
               <option value="COUNSELOR">Counselor (View Leads)</option>
+              <option value="CRM">CRM Executive</option>
+              <option value="FINANCE">Finance Executive</option>
               <option value="ADMIN">Admin (Full Access)</option>
+              <option value="SUPER_ADMIN">Super Admin (System Owner)</option>
             </select>
           </div>
 
@@ -184,10 +188,13 @@ export function UserTable({ initialUsers }: { initialUsers: { id: string; name: 
                   <td className="p-4 text-muted-foreground">{user.email}</td>
                   <td className="p-4">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold
-                      ${user.role === 'ADMIN' ? 'bg-primary/20 text-primary' : 
-                        user.role === 'EDITOR' ? 'bg-blue-500/20 text-blue-500' : 
-                        user.role === 'COUNSELOR' ? 'bg-purple-500/20 text-purple-500' : 
-                        'bg-zinc-500/20 text-zinc-500'}`}>
+                      ${user.role === 'SUPER_ADMIN' ? 'bg-red-100 text-red-800' : 
+                        user.role === 'ADMIN' ? 'bg-emerald-100 text-emerald-800' : 
+                        user.role === 'COUNSELOR' ? 'bg-purple-100 text-purple-800' : 
+                        user.role === 'CRM' ? 'bg-teal-100 text-teal-800' :
+                        user.role === 'EDITOR' ? 'bg-blue-100 text-blue-800' : 
+                        user.role === 'FINANCE' ? 'bg-indigo-100 text-indigo-800' :
+                        'bg-slate-100 text-slate-800'}`}>
                       {user.role}
                     </span>
                   </td>

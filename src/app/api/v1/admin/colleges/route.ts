@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       body.modes = body.modes.split(",").map((m: string) => m.trim()).filter(Boolean);
     }
 
-    const college = addCollege(body);
+    const college = await addCollege(body);
     return NextResponse.json({ data: college, error: null }, { status: 201 });
   } catch (error) {
     console.error("Failed to create college:", error);

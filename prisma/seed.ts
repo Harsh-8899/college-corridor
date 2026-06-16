@@ -1,25 +1,31 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@collegecorridor.com";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
+  const defaultPasswordHash = bcrypt.hashSync("password123", 10);
+
   const users = [
-    { email: "student@eduoofa.com", name: "Demo Student", role: "STUDENT" as const },
-    { email: "counselor@eduoofa.com", name: "Demo Counselor", role: "COUNSELOR" as const },
-    { email: "admin@eduoofa.com", name: "Demo Admin", role: "ADMIN" as const },
-    { email: "superadmin@eduoofa.com", name: "Demo Super Admin", role: "SUPER_ADMIN" as const }
+    { email: "student@collegecorridor.in", name: "Demo Student", role: "STUDENT" as const, password: defaultPasswordHash },
+    { email: "counselor@collegecorridor.in", name: "Demo Counselor", role: "COUNSELOR" as const, password: defaultPasswordHash },
+    { email: "admin@collegecorridor.in", name: "Demo Admin", role: "ADMIN" as const, password: defaultPasswordHash },
+    { email: "superadmin@collegecorridor.in", name: "Demo Super Admin", role: "SUPER_ADMIN" as const, password: defaultPasswordHash },
+    { email: ADMIN_EMAIL.toLowerCase(), name: "System Admin", role: "ADMIN" as const, password: bcrypt.hashSync(ADMIN_PASSWORD, 10) }
   ];
 
   for (const user of users) {
     await prisma.user.upsert({
       where: { email: user.email },
-      update: { name: user.name, role: user.role },
+      update: { name: user.name, role: user.role, password: user.password },
       create: user
     });
   }
 
   const counselor = await prisma.user.findUniqueOrThrow({
-    where: { email: "counselor@eduoofa.com" }
+    where: { email: "counselor@collegecorridor.in" }
   });
 
   await prisma.counselorProfile.upsert({

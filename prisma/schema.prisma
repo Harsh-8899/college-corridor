@@ -11,11 +11,13 @@ datasource db {
 }
 
 enum UserRole {
-  STUDENT
-  COUNSELOR
-  EDITOR
-  ADMIN
   SUPER_ADMIN
+  ADMIN
+  COUNSELOR
+  CRM
+  EDITOR
+  FINANCE
+  STUDENT
 }
 
 enum UserStatus {
@@ -150,6 +152,7 @@ model User {
   counselorAssignments CounselorAssignment[] @relation("StudentAssignments")
   crmNotesAuthored     CrmNote[]             @relation("CrmNoteAuthor")
   auditLogs            AuditLog[]
+  adminActivityLogs    AdminActivityLog[]
   payments             Payment[]
   reports              PdfReport[]
   recommendations      Recommendation[]
@@ -807,3 +810,17 @@ model SystemSetting {
   updatedBy String?
   updatedAt DateTime @updatedAt
 }
+
+model AdminActivityLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  admin     User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+}
+

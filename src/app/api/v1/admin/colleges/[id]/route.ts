@@ -59,7 +59,7 @@ export async function PUT(request: Request, context: RouteContext) {
         .trim();
     }
 
-    const updated = updateCollege(id, body);
+    const updated = await updateCollege(id, body);
     if (!updated) {
       return NextResponse.json(
         { error: { code: "NOT_FOUND", message: "College not found." } },
@@ -87,7 +87,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
-  const deleted = deleteCollege(id);
+  const deleted = await deleteCollege(id);
   if (!deleted) {
     return NextResponse.json(
       { error: { code: "NOT_FOUND", message: "College not found." } },

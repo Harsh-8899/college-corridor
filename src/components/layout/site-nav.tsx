@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, GraduationCap, Menu, UserPlus, Users } from "lucide-react";
@@ -14,8 +15,15 @@ const links = [
 
 export function SiteNav() {
   const pathname = usePathname();
+  const [isAdminSubdomain, setIsAdminSubdomain] = useState(false);
 
-  if (pathname.startsWith("/internal")) {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsAdminSubdomain(window.location.hostname.startsWith("admin."));
+    }
+  }, []);
+
+  if (pathname.startsWith("/internal") || pathname.startsWith("/admin") || isAdminSubdomain) {
     return null;
   }
 

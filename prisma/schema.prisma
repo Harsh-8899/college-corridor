@@ -13,6 +13,7 @@ datasource db {
 enum UserRole {
   STUDENT
   COUNSELOR
+  EDITOR
   ADMIN
   SUPER_ADMIN
 }
@@ -128,6 +129,7 @@ model User {
   email         String     @unique
   phone         String?    @unique
   image         String?
+  password      String?
   role          UserRole   @default(STUDENT)
   status        UserStatus @default(ACTIVE)
   emailVerified DateTime?

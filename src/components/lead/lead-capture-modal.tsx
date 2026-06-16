@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { colleges, leadUnlockItems } from "@/lib/data/colleges";
+
+const leadUnlockItems = [
+  "Detailed comparison",
+  "PDF reports",
+  "Placement insights",
+  "Scholarship details",
+  "AI recommendations",
+  "Counseling booking"
+];
 
 type LeadCaptureModalProps = {
   triggerLabel?: string;
@@ -36,6 +44,24 @@ export function LeadCaptureModal({
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [colleges, setColleges] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    if (isPremiumUnlocked()) {
+      onUnlocked?.();
+    }
+  }, [onUnlocked]);
+
+  useEffect(() => {
+    if (open && colleges.length === 0) {
+      fetch("/api/v1/public/colleges")
+        .then(res => res.json())
+        .then(data => {
+          if (data?.data) setColleges(data.data);
+        })
+        .catch(console.error);
+    }
+  }, [open, colleges.length]);
 
   const filteredColleges = useMemo(() => {
     const normalized = query.toLowerCase().trim();
@@ -43,13 +69,7 @@ export function LeadCaptureModal({
       return colleges;
     }
     return colleges.filter((college) => college.name.toLowerCase().includes(normalized));
-  }, [query]);
-
-  useEffect(() => {
-    if (isPremiumUnlocked()) {
-      onUnlocked?.();
-    }
-  }, [onUnlocked]);
+  }, [query, colleges]);
 
   async function handleSubmit(formData: FormData) {
     setStatus("submitting");

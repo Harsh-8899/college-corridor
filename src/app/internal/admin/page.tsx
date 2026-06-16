@@ -1,118 +1,80 @@
-import { BarChart3, Bell, Building2, IndianRupee, MessageSquareText, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { Building2 } from "lucide-react";
 import { StatCard } from "@/components/dashboard/stat-card";
-import { dashboardStats, recentLeads } from "@/lib/data/dashboard";
+import { AdminHeader } from "@/components/dashboard/admin-header";
+import { CollegeTable } from "@/components/dashboard/college-table";
+import { UserTable } from "@/components/dashboard/user-table";
+import { authOptions } from "@/lib/auth/options";
+import { getColleges } from "@/lib/data/colleges";
+import { prisma } from "@/lib/db/prisma";
 
-const queues = [
-  { label: "Applications needing action", value: 42, icon: Building2 },
-  { label: "Reviews awaiting moderation", value: 18, icon: MessageSquareText },
-  { label: "New lead notifications", value: 27, icon: Bell },
-  { label: "Counselor workload alerts", value: 6, icon: Users }
-];
+export const dynamic = "force-dynamic";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !["ADMIN", "EDITOR"].includes(session.user?.role as string)) {
+    redirect("/login");
+  }
+
+  const colleges = getColleges();
+  const isAdmin = session.user.role === "ADMIN";
+
+  // Fetch users if admin
+  let users: { id: string; name: string; email: string; role: string; status: string }[] = [];
+  if (isAdmin) {
+    const dbUsers = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, status: true },
+      orderBy: { createdAt: "desc" }
+    });
+    users = dbUsers.map(u => ({
+      ...u,
+      name: u.name || ""
+    }));
+  }
+
+  const stats = [
+    { label: "Total Colleges", value: String(colleges.length), delta: "Live" },
+    { label: "Total Courses", value: String(colleges.reduce((sum, c) => sum + c.courses.length, 0)), delta: "Across all" },
+    { label: "Total Seats", value: colleges.reduce((sum, c) => sum + c.seats, 0).toLocaleString("en-IN"), delta: "Combined" },
+    { label: "Avg Rating", value: colleges.length > 0 ? (colleges.reduce((sum, c) => sum + c.rating, 0) / colleges.length).toFixed(1) : "0", delta: "Out of 5" }
+  ];
+
   return (
-    <div className="page-shell space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold">Admin Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">
-            Full platform management for colleges, applications, analytics, revenue, and users.
-          </p>
-        </div>
-        <Button>
-          <Building2 className="h-4 w-4" />
-          Add college
-        </Button>
+    <div className="page-shell space-y-8">
+      <AdminHeader email={session.user.email || "admin"} />
+
+      <div>
+        <h1 className="text-3xl font-semibold">
+          {isAdmin ? "Admin Dashboard" : "Editor Dashboard"}
+        </h1>
+        <p className="mt-2 text-muted-foreground">
+          {isAdmin 
+            ? "Manage system users, colleges, and platform settings." 
+            : "Update college information, courses, and platform data."}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {dashboardStats.map((stat) => (
+        {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Lead and application queue</CardTitle>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead className="text-left text-muted-foreground">
-                <tr>
-                  <th className="border-b py-3 font-medium">Student</th>
-                  <th className="border-b py-3 font-medium">City</th>
-                  <th className="border-b py-3 font-medium">Course</th>
-                  <th className="border-b py-3 font-medium">College</th>
-                  <th className="border-b py-3 font-medium">Stage</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentLeads.map((lead) => (
-                  <tr key={lead.name}>
-                    <td className="border-b py-3 font-medium">{lead.name}</td>
-                    <td className="border-b py-3">{lead.city}</td>
-                    <td className="border-b py-3">{lead.course}</td>
-                    <td className="border-b py-3">{lead.college}</td>
-                    <td className="border-b py-3">
-                      <Badge>{lead.stage}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          {queues.map((queue) => (
-            <Card key={queue.label}>
-              <CardContent className="flex items-center justify-between gap-4 p-5">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <queue.icon className="h-5 w-5" />
-                  </span>
-                  <p className="text-sm font-medium">{queue.label}</p>
-                </div>
-                <p className="text-2xl font-semibold">{queue.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IndianRupee className="h-5 w-5 text-primary" />
-                Revenue tracking
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Mentorship bookings: INR 2.1L</p>
-              <p>Application fees: INR 3.4L</p>
-              <p>Partner leads: INR 2.9L</p>
-            </CardContent>
-          </Card>
+      {isAdmin && (
+        <div className="border-t pt-8">
+          <UserTable initialUsers={users} />
         </div>
-      </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            Analytics overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
-          {["Searches", "Shortlists", "Comparisons", "AI unlocks"].map((metric, index) => (
-            <div key={metric} className="rounded-md border p-4">
-              <p className="text-sm text-muted-foreground">{metric}</p>
-              <p className="mt-1 text-xl font-semibold">{[12400, 3280, 930, 418][index].toLocaleString("en-IN")}</p>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <div className="border-t pt-8">
+        <div className="mb-4 flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" />
+          <h2 className="text-xl font-semibold">College Management</h2>
+        </div>
+        <CollegeTable initialColleges={colleges} />
+      </div>
     </div>
   );
 }

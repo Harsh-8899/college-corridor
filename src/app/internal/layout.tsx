@@ -1,25 +1,40 @@
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import {
-  BarChart3,
   Building2,
   FileText,
   GraduationCap,
   LayoutDashboard,
-  Settings,
-  Users
+  Users,
+  Settings
 } from "lucide-react";
+import { authOptions } from "@/lib/auth/options";
 
-const sidebarItems = [
-  { href: "/internal/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/internal/crm", label: "Leads", icon: Users },
-  { href: "/internal/admin", label: "Applications", icon: FileText },
-  { href: "/internal/admin", label: "Colleges", icon: Building2 },
-  { href: "/internal/admin", label: "Reports", icon: FileText },
-  { href: "/internal/admin", label: "Analytics", icon: BarChart3 },
-  { href: "/internal/admin", label: "Settings", icon: Settings }
-];
+export default async function InternalLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getServerSession(authOptions);
 
-export default function InternalLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  if (!session || !["ADMIN", "EDITOR", "COUNSELOR"].includes(session.user?.role as string)) {
+    redirect("/login");
+  }
+
+  const role = session.user.role as string;
+
+  // Build sidebar items based on role
+  const sidebarItems = [];
+
+  if (role === "ADMIN" || role === "EDITOR") {
+    sidebarItems.push({ href: "/internal/admin", label: "Dashboard", icon: LayoutDashboard });
+  }
+
+  if (role === "ADMIN" || role === "COUNSELOR") {
+    sidebarItems.push({ href: "/internal/crm", label: "Leads", icon: Users });
+    sidebarItems.push({ href: "/internal/counselor", label: "Counselor", icon: FileText });
+  }
+
+  // Everyone internal gets settings
+  sidebarItems.push({ href: "/internal/settings", label: "Settings", icon: Settings });
+
   return (
     <div className="min-h-screen bg-muted/35 text-foreground lg:grid lg:grid-cols-[260px_1fr]">
       <aside className="border-b bg-card/95 backdrop-blur lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
@@ -29,7 +44,7 @@ export default function InternalLayout({ children }: Readonly<{ children: React.
           </span>
           <div>
             <p className="font-semibold">College Corridor</p>
-            <p className="text-xs text-muted-foreground">Internal workspace</p>
+            <p className="text-xs text-muted-foreground capitalize">{role.toLowerCase()} Panel</p>
           </div>
         </div>
         <nav className="flex gap-2 overflow-x-auto p-3 lg:block lg:space-y-1">
@@ -44,14 +59,17 @@ export default function InternalLayout({ children }: Readonly<{ children: React.
             </Link>
           ))}
         </nav>
+        <div className="mt-auto border-t p-3 lg:absolute lg:bottom-0 lg:left-0 lg:right-0">
+          <Link
+            href="/"
+            className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <Building2 className="h-4 w-4" />
+            View Public Site
+          </Link>
+        </div>
       </aside>
       <section className="min-w-0">
-        <header className="sticky top-0 z-30 border-b bg-background/90 px-4 py-3 backdrop-blur lg:px-6">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium">Internal Team Access</p>
-            <p className="text-xs text-muted-foreground">Admin · Counselor · CRM Executive</p>
-          </div>
-        </header>
         <main>{children}</main>
       </section>
     </div>

@@ -63,13 +63,20 @@ enum LeadStatus {
   QUALIFIED
   HOT
   COUNSELING_BOOKED
+  COUNSELING_SCHEDULED
   APPLICATION_STARTED
   DOCUMENTS_PENDING
+  APPLICATION_SUBMITTED
+  ADMISSION_OFFERED
+  ADMISSION_CONFIRMED
   APPLIED
   OFFER_RECEIVED
   ADMITTED
   ENROLLED
   LOST
+  ELIGIBLE
+  ALTERNATIVE_SUGGESTED
+  CLOSED
 }
 
 enum TaskStatus {
@@ -251,6 +258,11 @@ model Institution {
   sourceName            String?
   sourceUrl             String?
   published             Boolean           @default(false)
+  isPartner             Boolean           @default(false)
+  commissionNotes       String?           @db.Text
+  admissionContact      String?
+  priorityLevel         String?           
+  agreementStatus       String?           
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
 
@@ -263,6 +275,7 @@ model Institution {
   facilities           InstitutionFacility[]
   scholarships         InstitutionScholarship[]
   seo                  InstitutionSeo[]
+  admissionRules       AdmissionRule[]
 
   // Existing relations to keep the application integrated
   categories            Category[]
@@ -275,6 +288,10 @@ model Institution {
   applications          Application[]
   universityId          String?
   university            University?       @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  testimonials          Testimonial[]
+  faqs                  FAQ[]
+  logos                 Logo[]
+
 
   @@index([name])
   @@index([slug])
@@ -374,6 +391,24 @@ model Lead {
   budget               String?
   highestQualification String?
   status               LeadStatus      @default(NEW)
+  
+  // Dynamic fields
+  state                String?
+  preferredIntakeYear  String?
+  message              String?         @db.Text
+  consent              Boolean         @default(true)
+  sourcePage           String?
+  ctaClicked           String?
+  followUpDate         DateTime?
+  
+  // Admission checker fields
+  tenthPercentage       Float?
+  twelfthPercentage     Float?
+  graduationPercentage  Float?
+  entranceExam          String?
+  entranceExamScore     String?
+  preferredSpecialization String?
+  admissionResult       String?
   
   assignedCounselorId  String?
   assignedCounselor    User?           @relation("AssignedLeads", fields: [assignedCounselorId], references: [id], onDelete: SetNull)
@@ -792,6 +827,8 @@ model InstitutionCourse {
   examsAccepted       String?
   seats               String?
   applicationDeadline String?
+  courseId            String?
+  course              Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 
@@ -929,3 +966,171 @@ model InstitutionImportError {
 
   batch        InstitutionImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 }
+
+enum CarouselCategory {
+  ONLINE
+  OFFLINE
+  STUDY_ABROAD
+  DISTANCE
+}
+
+model CarouselSlide {
+  id           String           @id @default(cuid())
+  image        String
+  title        String
+  subtitle     String?
+  buttonText   String?
+  buttonLink   String?
+  category     CarouselCategory
+  displayOrder Int              @default(0)
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+enum LogoCategory {
+  UNIVERSITY
+  PARTNER
+  RECRUITER
+  ACCREDITATION
+}
+
+model Logo {
+  id           String       @id @default(cuid())
+  name         String
+  image        String
+  website      String?
+  category     LogoCategory
+  displayOrder Int          @default(0)
+  active       Boolean      @default(true)
+  collegeId    String?
+  college      Institution? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Testimonial {
+  id           String       @id @default(cuid())
+  studentName  String
+  studentImage String?
+  text         String       @db.Text
+  rating       Int          @default(5)
+  role         String?      
+  isPublished  Boolean      @default(true)
+  order        Int          @default(0)
+  collegeId    String?
+  college      Institution? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  courseId     String?      
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model FAQ {
+  id          String       @id @default(cuid())
+  question    String
+  answer      String       @db.Text
+  category    String?      
+  pageName    String?      
+  order       Int          @default(0)
+  active      Boolean      @default(true)
+  collegeId   String?
+  college     Institution? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  courseId    String?      
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model PageContent {
+  id              String   @id @default(cuid())
+  slug            String   @unique 
+  title           String
+  content         String   @db.Text 
+  metaTitle       String?
+  metaDescription String?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum BannerType {
+  ANNOUNCEMENT
+  HOMEPAGE
+  COURSE_PAGE
+  COLLEGE_PAGE
+  WHATSAPP
+  COUNSELING
+  APPLY_NOW
+}
+
+model Banner {
+  id           String     @id @default(cuid())
+  type         BannerType
+  image        String?
+  text         String     @db.Text
+  buttonText   String?
+  buttonLink   String?
+  displayOrder Int        @default(0)
+  active       Boolean    @default(true)
+  placement    String?    
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model EmailOTP {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  status    String   @default("PENDING") 
+  createdAt DateTime @default(now())
+}
+
+model AdmissionRule {
+  id                  String      @id @default(cuid())
+  universityId        String
+  university          Institution @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  courseName          String      
+  specialization      String?     
+  min10thPercentage   Float?
+  min12thPercentage   Float?
+  minGradPercentage   Float?
+  entranceExam        String?     
+  minEntranceScore    Float?
+  eligibilityRules    String?     @db.Text
+  scholarshipRules    String?     @db.Text
+  alternatives        String[]    
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+}
+
+model Course {
+  id                 String              @id @default(cuid())
+  name               String              @unique 
+  category           String              
+  level              String              
+  duration           String?
+  eligibility        String?             @db.Text
+  description        String?             @db.Text
+  careerOutcomes     String?             @db.Text
+  averageSalary      String?
+  slug               String              @unique
+  active             Boolean             @default(true)
+  specializations    Specialization[]
+  institutionCourses InstitutionCourse[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model Specialization {
+  id        String   @id @default(cuid())
+  name      String   
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([courseId, name])
+}
+

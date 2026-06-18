@@ -3,11 +3,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PremiumGate } from "@/components/lead/premium-gate";
-import { colleges } from "@/lib/data/colleges";
+import { getColleges } from "@/lib/data/colleges";
 
-const compared = colleges.slice(0, 3);
+export const dynamic = "force-dynamic";
 
-export default function ComparePage() {
+export default async function ComparePage() {
+  const dbColleges = await getColleges();
+  const compared = dbColleges.slice(0, 3);
+
+  if (compared.length === 0) {
+    return (
+      <div className="page-shell space-y-6 text-center py-20">
+        <h1 className="text-3xl font-semibold">College Comparison</h1>
+        <p className="text-muted-foreground mt-2">No colleges are currently available in the system to compare.</p>
+        <div className="mt-6">
+          <Button asChild>
+            <a href="/colleges">Explore Colleges</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page-shell space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -47,8 +64,8 @@ export default function ComparePage() {
             {[
               ["Location", ...compared.map((college) => `${college.city}, ${college.state}`)],
               ["Fees", ...compared.map((college) => college.fees)],
-              ["Ranking", ...compared.map((college) => `#${college.ranking}`)],
-              ["Courses", ...compared.map((college) => college.courses.slice(0, 2).join(", "))],
+              ["Ranking", ...compared.map((college) => college.ranking ? `#${college.ranking}` : "N/A")],
+              ["Courses", ...compared.map((college) => college.courses.slice(0, 2).join(", ") || "N/A")],
               ["Seats", ...compared.map((college) => String(college.seats))]
             ].map((row) => (
               <tr key={row[0]}>
@@ -93,8 +110,7 @@ export default function ComparePage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Greenwood is the strongest target option for technology placements. Riverbend is a cost-effective
-                safe option for commerce and computer applications. Northstar is strongest for management outcomes.
+                Based on your profile, {compared[0]?.name || "selected colleges"} are primary engineering recommendations, demonstrating strong placement metrics. Verify course alignment and intake schedules with counseling.
               </p>
             </CardContent>
           </Card>

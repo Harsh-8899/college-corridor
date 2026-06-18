@@ -14,9 +14,9 @@ const createUserSchema = z.object({
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user?.role || "")) {
     return NextResponse.json(
-      { error: { message: "Unauthorized. Admin access required." } },
+      { error: { message: "Unauthorized. Admin or Super Admin access required." } },
       { status: 401 }
     );
   }
@@ -45,9 +45,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "ADMIN") {
+  if (!session || !["ADMIN", "SUPER_ADMIN"].includes(session.user?.role || "")) {
     return NextResponse.json(
-      { error: { message: "Unauthorized. Admin access required." } },
+      { error: { message: "Unauthorized. Admin or Super Admin access required." } },
       { status: 401 }
     );
   }

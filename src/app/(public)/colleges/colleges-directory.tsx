@@ -17,6 +17,9 @@ import { Input } from "@/components/ui/input";
 import { CollegeCard } from "@/components/college/college-card";
 import type { College } from "@/lib/data/colleges";
 
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+
 type CollegesDirectoryProps = {
   initialColleges: College[];
 };
@@ -24,7 +27,20 @@ type CollegesDirectoryProps = {
 type EducationCategory = "offline" | "online" | "distance" | "study-abroad";
 
 export function CollegesDirectory({ initialColleges }: CollegesDirectoryProps) {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
+  
   const [activeCategory, setActiveCategory] = useState<EducationCategory>("offline");
+
+  useEffect(() => {
+    if (categoryParam) {
+      const normalized = categoryParam.toLowerCase();
+      if (["offline", "online", "distance", "study-abroad"].includes(normalized)) {
+        setActiveCategory(normalized as EducationCategory);
+      }
+    }
+  }, [categoryParam]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [selectedOwnership, setSelectedOwnership] = useState("");

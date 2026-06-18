@@ -14,7 +14,7 @@ import { authOptions } from "@/lib/auth/options";
 export default async function InternalLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getServerSession(authOptions);
 
-  if (!session || !["ADMIN", "EDITOR", "COUNSELOR"].includes(session.user?.role as string)) {
+  if (!session || !["ADMIN", "SUPER_ADMIN", "WEBSITE_MANAGER", "COUNSELOR", "SALES_MANAGER", "EDITOR"].includes(session.user?.role as string)) {
     redirect("/login");
   }
 
@@ -23,13 +23,17 @@ export default async function InternalLayout({ children }: Readonly<{ children: 
   // Build sidebar items based on role
   const sidebarItems = [];
 
-  if (role === "ADMIN" || role === "EDITOR") {
+  if (["ADMIN", "SUPER_ADMIN", "EDITOR", "WEBSITE_MANAGER"].includes(role)) {
     sidebarItems.push({ href: "/internal/admin", label: "Dashboard", icon: LayoutDashboard });
     sidebarItems.push({ href: "/internal/admin/institutions", label: "Institutions", icon: Building2 });
+    sidebarItems.push({ href: "/internal/admin/website-manager", label: "Website Manager", icon: Settings });
   }
 
-  if (role === "ADMIN" || role === "COUNSELOR") {
+  if (["ADMIN", "SUPER_ADMIN", "COUNSELOR", "SALES_MANAGER"].includes(role)) {
     sidebarItems.push({ href: "/internal/crm", label: "Leads", icon: Users });
+  }
+
+  if (["ADMIN", "SUPER_ADMIN", "COUNSELOR"].includes(role)) {
     sidebarItems.push({ href: "/internal/counselor", label: "Counselor", icon: FileText });
   }
 

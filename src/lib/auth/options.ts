@@ -38,13 +38,82 @@ export const authOptions: NextAuthOptions = {
       name: "Login",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        otp: { label: "OTP", type: "text" }
       },
       async authorize(credentials) {
         const email = credentials?.email?.toLowerCase().trim();
         const password = credentials?.password;
+        const otp = (credentials as any)?.otp;
 
-        if (!email || !password) {
+        if (!email) {
+          return null;
+        }
+
+        // 1. Check if OTP is provided for Login
+        if (otp) {
+          const record = await prisma.emailOTP.findFirst({
+            where: {
+              email: email,
+              status: "PENDING"
+            },
+            orderBy: {
+              createdAt: "desc"
+            }
+          });
+
+          if (!record) {
+            return null;
+          }
+
+          if (new Date() > record.expiresAt) {
+            await prisma.emailOTP.update({
+              where: { id: record.id },
+              data: { status: "EXPIRED" }
+            });
+            return null;
+          }
+
+          if (record.attempts >= 3) {
+            await prisma.emailOTP.update({
+              where: { id: record.id },
+              data: { status: "FAILED" }
+            });
+            return null;
+          }
+
+          if (record.otp !== otp) {
+            await prisma.emailOTP.update({
+              where: { id: record.id },
+              data: { attempts: { increment: 1 } }
+            });
+            return null;
+          }
+
+          // Mark verified
+          await prisma.emailOTP.update({
+            where: { id: record.id },
+            data: { status: "VERIFIED" }
+          });
+
+          const user = await prisma.user.findUnique({
+            where: { email },
+            include: { role: true }
+          });
+
+          if (!user) return null;
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            role: user.role?.name || "STUDENT"
+          };
+        }
+
+        // 2. Fall back to standard password evaluation
+        if (!password) {
           return null;
         }
 

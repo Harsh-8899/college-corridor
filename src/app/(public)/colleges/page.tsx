@@ -1,5 +1,6 @@
 import { getColleges } from "@/lib/data/colleges";
 import { CollegesDirectory } from "./colleges-directory";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,9 @@ export default async function CollegesPage() {
         </p>
       </div>
 
-      <CollegesDirectory initialColleges={collegesList} />
+      <Suspense fallback={<div className="text-center py-10">Loading college directory...</div>}>
+        <CollegesDirectory initialColleges={collegesList} />
+      </Suspense>
     </div>
   );
 }

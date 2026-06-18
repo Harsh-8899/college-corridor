@@ -13,6 +13,9 @@ type LeadCaptureModalProps = {
   selectedCollegeIds?: string[];
   contentKey: string;
   onUnlocked?: () => void;
+  initialCategory?: string;
+  triggerClassName?: string;
+  hideIcon?: boolean;
 };
 
 const unlockStorageKey = "college-corridor-premium-unlocked";
@@ -30,7 +33,10 @@ export function LeadCaptureModal({
   sourcePage,
   selectedCollegeIds = [],
   contentKey,
-  onUnlocked
+  onUnlocked,
+  initialCategory,
+  triggerClassName,
+  hideIcon = false
 }: LeadCaptureModalProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -46,11 +52,18 @@ export function LeadCaptureModal({
     email: "",
     currentCity: "",
     preferredCourse: "",
-    preferredCategory: "OFFLINE",
+    preferredCategory: initialCategory || "OFFLINE",
     preferredLocation: "",
     budget: "",
     highestQualification: ""
   });
+
+  // Reset category on open if initialCategory is set
+  useEffect(() => {
+    if (open && initialCategory) {
+      setForm((prev) => ({ ...prev, preferredCategory: initialCategory }));
+    }
+  }, [open, initialCategory]);
 
   // Pre-fill cache if exists
   useEffect(() => {
@@ -59,13 +72,13 @@ export function LeadCaptureModal({
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          setForm((prev) => ({ ...prev, ...parsed }));
+          setForm((prev) => ({ ...prev, ...parsed, preferredCategory: initialCategory || parsed.preferredCategory || "OFFLINE" }));
         } catch (e) {
           console.error("Failed to parse cached lead", e);
         }
       }
     }
-  }, []);
+  }, [initialCategory]);
 
   // Sync unlock status
   useEffect(() => {
@@ -217,8 +230,8 @@ export function LeadCaptureModal({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="gap-2 shadow-lg hover:shadow-primary/20 transition-all font-medium">
-        <LockKeyhole className="h-4 w-4" />
+      <Button onClick={() => setOpen(true)} className={triggerClassName || "gap-2 shadow-lg hover:shadow-primary/20 transition-all font-medium"}>
+        {!hideIcon && <LockKeyhole className="h-4 w-4" />}
         {triggerLabel}
       </Button>
 

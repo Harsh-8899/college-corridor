@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Globe, DollarSign, FileCheck, Briefcase, Award, ChevronRight, HelpCircle } from "lucide-react";
 import { Metadata } from "next";
+import { LeadCaptureModal } from "@/components/lead/lead-capture-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -122,9 +123,14 @@ export default async function StudyAbroadDetailsPage({ params }: PageProps) {
             </p>
           </div>
           <div className="flex flex-col gap-3 min-w-[220px]">
-            <Button size="lg" className="w-full">
-              Book Study Abroad Counselor
-            </Button>
+            <LeadCaptureModal
+              triggerLabel="Book Study Abroad Counselor"
+              sourcePage={`/study-abroad/${country.slug}`}
+              contentKey={`study-abroad-${country.slug}`}
+              initialCategory="STUDY_ABROAD"
+              triggerClassName="w-full h-11 text-base bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center gap-2 rounded-md font-semibold"
+              hideIcon={true}
+            />
             <Button variant="outline" size="lg" asChild className="w-full">
               <Link href="/colleges">Explore Indian Options</Link>
             </Button>
@@ -238,11 +244,14 @@ export default async function StudyAbroadDetailsPage({ params }: PageProps) {
               <p className="text-xs text-primary-foreground/80 leading-relaxed">
                 Connect with our international study experts. We offer end-to-end support for University shortlisting, Essay reviews, F1/Student Visa interview preparation, and education loan/scholarship applications.
               </p>
-              <Button asChild className="w-full bg-white text-primary hover:bg-white/95">
-                <Link href="/login">
-                  Get Free Consultation
-                </Link>
-              </Button>
+              <LeadCaptureModal
+                triggerLabel="Get Free Consultation"
+                sourcePage={`/study-abroad/${country.slug}`}
+                contentKey={`study-abroad-consult-${country.slug}`}
+                initialCategory="STUDY_ABROAD"
+                triggerClassName="w-full bg-white text-primary hover:bg-white/95 h-10 flex items-center justify-center font-medium rounded-md"
+                hideIcon={true}
+              />
             </CardContent>
           </Card>
 

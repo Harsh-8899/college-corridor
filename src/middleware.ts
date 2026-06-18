@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
     });
 
     // Valid internal roles
-    const isAuthorized = token && ["ADMIN", "SUPER_ADMIN", "MANAGEMENT", "EDITOR", "COUNSELOR", "CRM"].includes(token.role || "");
+    const isAuthorized = token && ["ADMIN", "SUPER_ADMIN", "MANAGEMENT", "EDITOR", "COUNSELOR", "CRM", "WEBSITE_MANAGER", "SALES_MANAGER"].includes(token.role || "");
 
     if (!isAuthorized) {
       if (pathname.startsWith("/api")) {

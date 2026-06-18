@@ -29,6 +29,10 @@ export default async function InternalLayout({ children }: Readonly<{ children: 
     sidebarItems.push({ href: "/internal/admin/website-manager", label: "Website Manager", icon: Settings });
   }
 
+  if (["ADMIN", "SUPER_ADMIN"].includes(role)) {
+    sidebarItems.push({ href: "/internal/admin/users", label: "Users Manager", icon: Users });
+  }
+
   if (["ADMIN", "SUPER_ADMIN", "COUNSELOR", "SALES_MANAGER"].includes(role)) {
     sidebarItems.push({ href: "/internal/crm", label: "Leads", icon: Users });
   }

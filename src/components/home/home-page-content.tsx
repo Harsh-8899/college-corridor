@@ -3,28 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  ArrowRight,
-  Award,
   BookOpen,
   CheckCircle,
-  HelpCircle,
-  Layers,
-  Loader2,
-  MapPin,
-  MessageSquare,
-  Sparkles,
-  Users,
   Compass,
+  MapPin,
+  Sparkles,
   X,
-  PhoneCall,
-  ExternalLink,
-  ChevronDown,
-  AlertCircle
+  ChevronDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AdmissionMatchingWizard } from "./admission-matching-wizard";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 type HomePageContentProps = {
@@ -51,72 +41,15 @@ export function HomePageContent({
   partners,
   testimonials,
   faqs,
-  slides,
-  universityLogos,
-  recruiterLogos,
-  accreditationLogos,
   courses
 }: HomePageContentProps) {
-  // Form State
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    state: "",
-    city: "",
-    currentQualification: "Class 12",
-    tenthPercentage: "",
-    twelfthPercentage: "",
-    graduationPercentage: "",
-    entranceExam: "JEE Main",
-    entranceExamScore: "",
-    preferredCourse: "B.Tech",
-    preferredSpecialization: "Computer Science",
-    preferredUniversity: "",
-    budgetRange: "2-4 LPA"
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [preSelectedUniversityId, setPreSelectedUniversityId] = useState<string>("");
 
   // FAQ accordion state
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
-  const handleCheckChances = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    setResult(null);
-
-    try {
-      const res = await fetch("/api/v1/admissions/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          sourcePage: "/",
-          ctaClicked: "Hero Check Chances Form"
-        })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data?.error?.message || "Failed to check admission chances.");
-      }
-
-      const data = await res.json();
-      setResult(data.evaluation);
-      setShowResultModal(true);
-    } catch (err: any) {
-      setError(err.message || "Failed to connect to eligibility evaluator.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const currentYear = new Date().getFullYear();
 
   return (
     <div className="bg-slate-50 min-h-screen text-slate-900 font-sans">
@@ -200,168 +133,18 @@ export function HomePageContent({
           </p>
         </div>
 
-        <Card className="max-w-3xl mx-auto border-slate-200/80 shadow-lg bg-white overflow-hidden">
-          <CardHeader className="bg-slate-950 text-white p-6">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-indigo-400 animate-pulse" />
-              Academic Evaluation Profile Form
-            </CardTitle>
-            <p className="text-slate-400 text-xs mt-1">Provide correct information to ensure accurate evaluation.</p>
-          </CardHeader>
-          <CardContent className="p-6 sm:p-8">
-            {error && (
-              <div className="mb-6 rounded-lg bg-rose-50 border border-rose-100 p-4 text-sm font-semibold text-rose-600 flex items-center gap-2 animate-in fade-in">
-                <AlertCircle className="h-5 w-5 shrink-0" />
-                {error}
-              </div>
-            )}
+        <div className="max-w-3xl mx-auto">
+          <AdmissionMatchingWizard
+            courses={courses}
+            universitiesList={universitiesList}
+            initialUniversityId={preSelectedUniversityId}
+            onSubmitSuccess={(evaluationResult) => {
+              setResult(evaluationResult);
+              setShowResultModal(true);
+            }}
+          />
+        </div>
 
-            <form onSubmit={handleCheckChances} className="space-y-6">
-              <div className="grid gap-5 sm:grid-cols-2">
-                {/* Academic Profile Details */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="name" className="text-slate-700 font-semibold">Student Full Name</Label>
-                  <Input id="name" placeholder="e.g. Priyan Sharma" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="phone" className="text-slate-700 font-semibold">Mobile Number</Label>
-                  <Input id="phone" placeholder="e.g. 9876543210" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-slate-700 font-semibold">Email Address</Label>
-                  <Input id="email" type="email" placeholder="e.g. priyan@gmail.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="state" className="text-slate-700 font-semibold">State</Label>
-                  <Input id="state" placeholder="e.g. Uttar Pradesh" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="city" className="text-slate-700 font-semibold">City</Label>
-                  <Input id="city" placeholder="e.g. Noida" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="currentQualification" className="text-slate-700 font-semibold">Current Qualification</Label>
-                  <select
-                    id="currentQualification"
-                    value={form.currentQualification}
-                    onChange={(e) => setForm({ ...form, currentQualification: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-background px-3 py-2 text-sm text-slate-800"
-                  >
-                    <option value="Class 12">Class 12 / Higher Secondary</option>
-                    <option value="Bachelors Degree">Bachelors Degree / Graduation</option>
-                    <option value="Masters Degree">Masters Degree</option>
-                    <option value="Diploma">Diploma Holder</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="tenthPercentage" className="text-slate-700 font-semibold">Class 10th Marks (%)</Label>
-                  <Input id="tenthPercentage" type="number" step="0.01" placeholder="e.g. 82.5" value={form.tenthPercentage} onChange={(e) => setForm({ ...form, tenthPercentage: e.target.value })} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="twelfthPercentage" className="text-slate-700 font-semibold">Class 12th Marks (%)</Label>
-                  <Input id="twelfthPercentage" type="number" step="0.01" placeholder="e.g. 78.0" value={form.twelfthPercentage} onChange={(e) => setForm({ ...form, twelfthPercentage: e.target.value })} required />
-                </div>
-
-                {form.currentQualification === "Bachelors Degree" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="graduationPercentage" className="text-slate-700 font-semibold">Graduation Marks (%)</Label>
-                    <Input id="graduationPercentage" type="number" step="0.01" placeholder="e.g. 68.4" value={form.graduationPercentage} onChange={(e) => setForm({ ...form, graduationPercentage: e.target.value })} />
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="entranceExam" className="text-slate-700 font-semibold">Entrance Exam Attempted</Label>
-                  <select
-                    id="entranceExam"
-                    value={form.entranceExam}
-                    onChange={(e) => setForm({ ...form, entranceExam: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-background px-3 py-2 text-sm text-slate-800"
-                  >
-                    <option value="JEE Main">JEE Main</option>
-                    <option value="CAT">CAT (Common Admission Test)</option>
-                    <option value="MAT">MAT (Management Aptitude Test)</option>
-                    <option value="BITSAT">BITSAT</option>
-                    <option value="VITEEE">VITEEE</option>
-                    <option value="CUET">CUET</option>
-                    <option value="None">None / Board Merits Only</option>
-                  </select>
-                </div>
-
-                {form.entranceExam !== "None" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="entranceExamScore" className="text-slate-700 font-semibold">Exam Score / Rank</Label>
-                    <Input id="entranceExamScore" placeholder="e.g. 85.6 percentile or Rank 1200" value={form.entranceExamScore} onChange={(e) => setForm({ ...form, entranceExamScore: e.target.value })} />
-                  </div>
-                )}
-
-                {/* Course Interests */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="preferredCourse" className="text-slate-700 font-semibold">Preferred Course</Label>
-                  <select
-                    id="preferredCourse"
-                    value={form.preferredCourse}
-                    onChange={(e) => setForm({ ...form, preferredCourse: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-background px-3 py-2 text-sm text-slate-800"
-                  >
-                    {courses.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="preferredSpecialization" className="text-slate-700 font-semibold">Preferred Specialization</Label>
-                  <Input id="preferredSpecialization" placeholder="e.g. Computer Science, Finance" value={form.preferredSpecialization} onChange={(e) => setForm({ ...form, preferredSpecialization: e.target.value })} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="preferredUniversity" className="text-slate-700 font-semibold">Preferred University</Label>
-                  <select
-                    id="preferredUniversity"
-                    value={form.preferredUniversity}
-                    onChange={(e) => setForm({ ...form, preferredUniversity: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-background px-3 py-2 text-sm text-slate-800"
-                  >
-                    <option value="">-- Let System Recommend --</option>
-                    {universitiesList.map((uni) => (
-                      <option key={uni.id} value={uni.id}>{uni.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="budgetRange" className="text-slate-700 font-semibold">Budget Range (Annual)</Label>
-                  <select
-                    id="budgetRange"
-                    value={form.budgetRange}
-                    onChange={(e) => setForm({ ...form, budgetRange: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-slate-200 bg-background px-3 py-2 text-sm text-slate-800"
-                  >
-                    <option value="Under 1 LPA">Under 1 Lakh / Year</option>
-                    <option value="1-2 LPA">1 - 2 Lakhs / Year</option>
-                    <option value="2-4 LPA">2 - 4 Lakhs / Year</option>
-                    <option value="4-8 LPA">4 - 8 Lakhs / Year</option>
-                    <option value="Above 8 LPA">Above 8 Lakhs / Year</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <Button type="submit" disabled={loading} className="w-full bg-[#2563EB] hover:bg-indigo-700 text-white font-bold h-12 text-base shadow-md">
-                  {loading ? (
-                    <span className="flex items-center gap-2 justify-center">
-                      <Loader2 className="h-5 w-5 animate-spin" /> Evaluating Admission Chances...
-                    </span>
-                  ) : (
-                    "Check Admission Chances"
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
       </section>
 
       {/* CHANCES RESULT POPUP MODAL */}
@@ -532,7 +315,7 @@ export function HomePageContent({
                   <button
                     type="button"
                     onClick={() => {
-                      setForm((prev) => ({ ...prev, preferredUniversity: p.id }));
+                      setPreSelectedUniversityId(p.id);
                       document.getElementById("checker-section")?.scrollIntoView({ behavior: "smooth" });
                     }}
                     className="flex-1 inline-flex h-9 items-center justify-center rounded-lg bg-[#2563EB] hover:bg-indigo-700 text-xs font-bold text-white transition-colors shadow-sm"

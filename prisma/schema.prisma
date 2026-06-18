@@ -8,8 +8,10 @@ datasource db {
 }
 
 enum UserStatus {
+  PENDING_VERIFICATION
   ACTIVE
   INVITED
+  BLOCKED
   SUSPENDED
   DELETED
 }
@@ -115,14 +117,20 @@ model Permission {
 model User {
   id            String     @id @default(cuid())
   name          String?
+  fullName      String?
   email         String     @unique
   phone         String?    @unique
+  phoneVerified Boolean    @default(false)
   image         String?
   password      String?
   roleId        String?
   role          Role?      @relation(fields: [roleId], references: [id])
-  status        UserStatus @default(ACTIVE)
+  status        UserStatus @default(PENDING_VERIFICATION)
   emailVerified DateTime?
+  city          String?
+  state         String?
+  lastLogin     DateTime?
+  source        String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   deletedAt     DateTime?
@@ -153,6 +161,8 @@ model User {
   leadsAssigned        Lead[]                @relation("AssignedLeads")
   leadsCreated         Lead[]                @relation("LeadStudentUser")
   notifications        Notification[]
+  otps                 OTP[]
+  admissionChanceResults AdmissionChanceResult[]
   questions            Question[]
   answers              Answer[]
   universityPartner    UniversityPartner?
@@ -291,6 +301,7 @@ model Institution {
   testimonials          Testimonial[]
   faqs                  FAQ[]
   logos                 Logo[]
+  admissionChanceResults AdmissionChanceResult[]
 
 
   @@index([name])
@@ -697,6 +708,7 @@ model SavedInstitution {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   institutionId String
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  status        String      @default("INTERESTED") // INTERESTED, SHORTLISTED, APPLIED
   createdAt     DateTime    @default(now())
 
   @@unique([userId, institutionId])
@@ -1132,5 +1144,36 @@ model Specialization {
   updatedAt DateTime @updatedAt
   
   @@unique([courseId, name])
+}
+
+model OTP {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  otpCodeHash   String
+  otpType       String   // "email_verification" | "phone_verification" | "password_reset"
+  expiresAt     DateTime
+  attemptCount  Int      @default(0)
+  verified      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model AdmissionChanceResult {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  institutionId   String
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  course          String
+  admissionChance String      // "HIGH_CHANCE" | "MODERATE_CHANCE" | "LOW_CHANCE" | "EXPERT_REVIEW_NEEDED"
+  status          String      @default("PENDING")
+  createdAt       DateTime    @default(now())
+}
+
+model RateLimitLog {
+  id        String   @id @default(cuid())
+  ip        String
+  action    String
+  createdAt DateTime @default(now())
 }
 

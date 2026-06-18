@@ -1,17 +1,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import crypto from "crypto";
+import { verifyTurnstileToken } from "@/lib/security/turnstile";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json().catch(() => ({ email: "" }));
+    const ip = request.headers.get("x-forwarded-for") || "127.0.0.1";
+    const { email, captchaToken } = await request.json().catch(() => ({ email: "", captchaToken: "" }));
     const cleanEmail = email?.toLowerCase().trim();
 
     if (!cleanEmail || !cleanEmail.includes("@")) {
       return NextResponse.json(
         { error: { message: "Please enter a valid email address." } },
+        { status: 400 }
+      );
+    }
+
+    // Validate Cloudflare Turnstile Token
+    const isCaptchaValid = await verifyTurnstileToken(captchaToken, ip);
+    if (!isCaptchaValid) {
+      return NextResponse.json(
+        { error: { message: "Security check failed. Please refresh and try again." } },
         { status: 400 }
       );
     }

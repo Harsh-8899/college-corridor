@@ -57,7 +57,35 @@ export async function POST(request: Request) {
       preferredUniversity || undefined
     );
 
-    // 2. Perform Lead Deduplication & Save
+    // 2. Perform Lead Resolution and Save AdmissionChanceResult for authenticated users
+    const { getServerSession } = await import("next-auth");
+    const { authOptions } = await import("@/lib/auth/options");
+    const session = await getServerSession(authOptions);
+    let studentUserId: string | null = null;
+
+    if (session?.user?.email) {
+      const dbUser = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      });
+      if (dbUser) {
+        studentUserId = dbUser.id;
+        
+        // Persist history if preferredUniversity is provided
+        if (preferredUniversity) {
+          await prisma.admissionChanceResult.create({
+            data: {
+              userId: dbUser.id,
+              institutionId: preferredUniversity,
+              course: preferredCourse,
+              admissionChance: evaluation.status,
+              status: "APPROVED"
+            }
+          });
+        }
+      }
+    }
+
+    // 3. Perform Lead Deduplication & Save
     let lead = await prisma.lead.findFirst({
       where: {
         OR: [
@@ -88,7 +116,8 @@ export async function POST(request: Request) {
       status: "NEW" as const, // Status defaults to NEW as requested
       interestedInstitutionId: preferredUniversity || null,
       sourcePage: sourcePage || "/",
-      ctaClicked: ctaClicked || "Check Admission Chances"
+      ctaClicked: ctaClicked || "Check Admission Chances",
+      createdStudentUserId: studentUserId || null
     };
 
     if (lead) {

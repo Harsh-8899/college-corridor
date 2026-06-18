@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SiteNav } from "@/components/layout/site-nav";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "College Corridor - College Admissions Platform",
@@ -11,8 +12,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <SiteNav />
-        <main>{children}</main>
+        <Providers>
+          <SiteNav />
+          <main>{children}</main>
+        </Providers>
       </body>
     </html>
   );

@@ -26,9 +26,14 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        fullName: true,
         email: true,
-        role: true,
+        phone: true,
+        phoneVerified: true,
+        city: true,
+        state: true,
         status: true,
+        role: { select: { name: true } },
         createdAt: true
       },
       orderBy: { createdAt: "desc" }

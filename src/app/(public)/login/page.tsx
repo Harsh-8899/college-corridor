@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { LogIn, AlertCircle, Loader2 } from "lucide-react";
+import { LogIn, AlertCircle, Loader2, KeyRound, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -18,16 +18,46 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
-  const [loginMode, setLoginMode] = useState<"password" | "otp">("password");
+  const [newPassword, setNewPassword] = useState("");
+  
+  const [loginMode, setLoginMode] = useState<"password" | "otp" | "forgot_password">("password");
   const [otpSent, setOtpSent] = useState(false);
   const [devOtp, setDevOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+
+  // Load Turnstile Script dynamically
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+
+    (window as any).onTurnstileSuccess = (token: string) => {
+      setCaptchaToken(token);
+      setError("");
+    };
+
+    return () => {
+      try {
+        document.head.removeChild(script);
+      } catch (e) {
+        // Safe catch
+      }
+      delete (window as any).onTurnstileSuccess;
+    };
+  }, [loginMode]);
 
   async function handleSendOtp() {
     if (!email || !email.includes("@")) {
       setError("Please enter a valid email address first.");
+      return;
+    }
+    if (!captchaToken && process.env.NODE_ENV === "production") {
+      setError("Please complete the security verification captcha.");
       return;
     }
     setError("");
@@ -38,7 +68,7 @@ function LoginForm() {
       const res = await fetch("/api/v1/auth/login-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, captchaToken })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -52,6 +82,93 @@ function LoginForm() {
     } catch (err: any) {
       setError(err.message || "Error sending OTP.");
     } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRequestReset() {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address first.");
+      return;
+    }
+    if (!captchaToken && process.env.NODE_ENV === "production") {
+      setError("Please complete the security verification captcha.");
+      return;
+    }
+    setError("");
+    setMessage("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/v1/auth/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailOrPhone: email,
+          type: "password_reset",
+          captchaToken
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error?.message || "Failed to request reset code.");
+      }
+      setOtpSent(true);
+      setMessage(data.message || "Reset verification OTP code sent to your email.");
+      if (data.devCode) {
+        setDevOtp(data.devCode);
+      }
+    } catch (err: any) {
+      setError(err.message || "Error requesting reset code.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPasswordSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
+
+    if (otp.length !== 6) {
+      setError("Verification code must be exactly 6 digits.");
+      setLoading(false);
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("New password must be at least 6 characters.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/v1/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          code: otp,
+          newPassword
+        })
+      });
+
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        throw new Error(data?.error?.message || "Password reset failed.");
+      }
+
+      setMessage("Password updated successfully! Please login with your new password.");
+      setLoginMode("password");
+      setPassword("");
+      setOtp("");
+      setNewPassword("");
+      setOtpSent(false);
+      setDevOtp("");
+    } catch (err: any) {
+      setError(err.message || "Error resetting password.");
       setLoading(false);
     }
   }
@@ -101,46 +218,60 @@ function LoginForm() {
 
   return (
     <>
-      <CardHeader>
-        <CardTitle>Sign In</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Access your profile, saved colleges, or dashboard.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Toggle Mode */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-lg text-sm mb-4">
-          <button
-            type="button"
-            className={`py-1.5 rounded-md font-medium transition-all ${
-              loginMode === "password"
-                ? "bg-white text-slate-950 shadow-xs"
-                : "text-slate-500 hover:text-slate-900"
-            }`}
-            onClick={() => {
-              setLoginMode("password");
-              setError("");
-              setMessage("");
-            }}
-          >
-            Password Mode
-          </button>
-          <button
-            type="button"
-            className={`py-1.5 rounded-md font-medium transition-all ${
-              loginMode === "otp"
-                ? "bg-white text-slate-950 shadow-xs"
-                : "text-slate-500 hover:text-slate-900"
-            }`}
-            onClick={() => {
-              setLoginMode("otp");
-              setError("");
-              setMessage("");
-            }}
-          >
-            OTP Mode
-          </button>
+      <CardHeader className="bg-slate-950 text-white p-6 rounded-t-lg">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="flex h-7 w-7 items-center justify-center rounded bg-indigo-500/20 text-indigo-400">
+            <KeyRound className="h-4 w-4" />
+          </span>
+          <CardTitle className="text-xl font-bold">
+            {loginMode === "forgot_password" ? "Reset Password" : "Student Sign In"}
+          </CardTitle>
         </div>
+        <CardDescription className="text-slate-400 text-xs">
+          {loginMode === "forgot_password" 
+            ? "Verify your identity using email OTP to set a new password." 
+            : "Access your dashboard, shortlisted universities, and leads details."}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-4 p-6 sm:p-8">
+        {/* Toggle Mode (only visible when not resetting password) */}
+        {loginMode !== "forgot_password" && (
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-lg text-sm mb-4">
+            <button
+              type="button"
+              className={`py-1.5 rounded-md font-medium transition-all ${
+                loginMode === "password"
+                  ? "bg-white text-slate-950 shadow-xs"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+              onClick={() => {
+                setLoginMode("password");
+                setError("");
+                setMessage("");
+                setOtpSent(false);
+              }}
+            >
+              Password Mode
+            </button>
+            <button
+              type="button"
+              className={`py-1.5 rounded-md font-medium transition-all ${
+                loginMode === "otp"
+                  ? "bg-white text-slate-950 shadow-xs"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+              onClick={() => {
+                setLoginMode("otp");
+                setError("");
+                setMessage("");
+                setOtpSent(false);
+              }}
+            >
+              OTP Mode
+            </button>
+          </div>
+        )}
 
         {registered && (
           <div className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
@@ -160,13 +291,13 @@ function LoginForm() {
         )}
 
         {/* Developer Sandbox/Mode Helper */}
-        {loginMode === "otp" && devOtp && (
+        {devOtp && (
           <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700 font-mono">
-            <strong>Dev Mode OTP:</strong> {devOtp} (Use this code to verify)
+            <strong>Dev Mode OTP Code:</strong> {devOtp} (Use this code to verify)
           </div>
         )}
 
-        {loginMode === "password" ? (
+        {loginMode === "password" && (
           <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
@@ -180,7 +311,21 @@ function LoginForm() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="password">Password</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginMode("forgot_password");
+                    setError("");
+                    setMessage("");
+                    setOtpSent(false);
+                  }}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold"
+                >
+                  Forgot Password?
+                </button>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -190,7 +335,7 @@ function LoginForm() {
                 required
               />
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full bg-[#2563EB] hover:bg-indigo-700 text-white font-bold">
               {loading ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
@@ -202,7 +347,9 @@ function LoginForm() {
               )}
             </Button>
           </form>
-        ) : (
+        )}
+
+        {loginMode === "otp" && (
           <form onSubmit={handleSubmit} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
@@ -254,17 +401,121 @@ function LoginForm() {
                 </div>
               </>
             ) : (
-              <Button type="button" onClick={handleSendOtp} disabled={loading} className="w-full bg-[#2563EB] hover:bg-indigo-700 text-white">
-                {loading ? (
-                  <span className="flex items-center gap-2 justify-center">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Generating OTP...
-                  </span>
-                ) : (
-                  "Request Login OTP"
-                )}
-              </Button>
+              <>
+                {/* Cloudflare Turnstile Captcha Section for OTP requests */}
+                <div className="pt-1 flex justify-center">
+                  <div
+                    className="cf-turnstile"
+                    data-sitekey="1x00000000000000000000AA"
+                    data-callback="onTurnstileSuccess"
+                    data-theme="light"
+                  />
+                </div>
+                
+                <Button type="button" onClick={handleSendOtp} disabled={loading} className="w-full bg-[#2563EB] hover:bg-indigo-700 text-white">
+                  {loading ? (
+                    <span className="flex items-center gap-2 justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Generating OTP...
+                    </span>
+                  ) : (
+                    "Request Login OTP"
+                  )}
+                </Button>
+              </>
             )}
           </form>
+        )}
+
+        {loginMode === "forgot_password" && (
+          <div className="space-y-4">
+            {!otpSent ? (
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="email">Registered Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </div>
+                
+                {/* Cloudflare Turnstile Captcha Section for Resets */}
+                <div className="pt-1 flex justify-center">
+                  <div
+                    className="cf-turnstile"
+                    data-sitekey="1x00000000000000000000AA"
+                    data-callback="onTurnstileSuccess"
+                    data-theme="light"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="button" onClick={handleRequestReset} disabled={loading} className="flex-1 bg-[#2563EB] hover:bg-indigo-700 text-white">
+                    {loading ? "Generating OTP..." : "Send Verification Code"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setLoginMode("password");
+                      setError("");
+                      setMessage("");
+                    }}
+                  >
+                    Back to Sign In
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="otp">Enter 6-Digit Email OTP</Label>
+                  <Input
+                    id="otp"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="e.g. 123456"
+                    maxLength={6}
+                    required
+                    className="text-center font-mono tracking-widest text-lg"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                    {loading ? "Resetting Password..." : "Update Password"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setOtpSent(false);
+                      setOtp("");
+                      setNewPassword("");
+                    }}
+                  >
+                    Change Email
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
         )}
 
         <div className="relative my-4">
@@ -278,7 +529,7 @@ function LoginForm() {
 
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full font-bold"
           onClick={() => signIn("google", { callbackUrl })}
         >
           <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -303,7 +554,7 @@ function LoginForm() {
           Sign in with Google
         </Button>
 
-        <Button asChild variant="ghost" className="w-full">
+        <Button asChild variant="ghost" className="w-full font-semibold">
           <Link href="/register">Don&apos;t have an account? Register</Link>
         </Button>
       </CardContent>
@@ -313,8 +564,8 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="page-shell flex min-h-[70vh] items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="page-shell flex min-h-[70vh] items-center justify-center bg-slate-50 py-10 text-slate-900">
+      <Card className="w-full max-w-md shadow-md border-slate-200 bg-white">
         <Suspense fallback={<div className="p-8 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></div>}>
           <LoginForm />
         </Suspense>

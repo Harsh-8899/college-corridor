@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth/options";
 
 const leadCreateSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -46,32 +48,59 @@ export async function POST(request: Request) {
     const data = parsed.data;
     const normalizedPhone = data.phone.replace(/[\s-()]/g, "");
 
-    // 1. Strict Server-Side OTP Verification Check
-    // Verifies that a successful OTP verification occurred within the last 15 minutes
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-    const otpVerified = await prisma.oTPVerification.findFirst({
-      where: {
-        phone: normalizedPhone,
-        status: "VERIFIED",
-        createdAt: { gte: fifteenMinutesAgo }
-      }
-    });
+    // 2. Retrieve authenticated user session and check if they are already verified
+    const session = await getServerSession(authOptions);
+    let studentUserId: string | null = null;
+    let isPhoneAlreadyVerified = false;
 
-    if (!otpVerified) {
-      return NextResponse.json(
-        {
-          data: null,
-          error: {
-            code: "OTP_NOT_VERIFIED",
-            message: "Mobile verification is required. Please verify with OTP before proceeding."
-          }
-        },
-        { status: 400 }
-      );
+    if (session?.user?.email) {
+      const dbUser = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      });
+      if (dbUser) {
+        studentUserId = dbUser.id;
+        // Check if the user is already verified with this phone number or if their user record has phoneVerified: true
+        if (dbUser.phoneVerified && dbUser.phone && dbUser.phone.replace(/[\s-()]/g, "") === normalizedPhone) {
+          isPhoneAlreadyVerified = true;
+        }
+      }
     }
 
-    // 2. Lead Deduplication and Upsert Logic
-    // If phone or email exists, we update the existing lead stage/history instead of creating duplicates
+    // 1. Strict Server-Side OTP Verification Check
+    if (!isPhoneAlreadyVerified) {
+      // Verifies that a successful OTP verification occurred within the last 15 minutes
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const otpVerified = await prisma.oTPVerification.findFirst({
+        where: {
+          phone: normalizedPhone,
+          status: "VERIFIED",
+          createdAt: { gte: fifteenMinutesAgo }
+        }
+      });
+
+      if (!otpVerified) {
+        return NextResponse.json(
+          {
+            data: null,
+            error: {
+              code: "OTP_NOT_VERIFIED",
+              message: "Mobile verification is required. Please verify with OTP before proceeding."
+            }
+          },
+          { status: 400 }
+        );
+      }
+
+      // If the user is logged in, mark their profile verified and store the phone number
+      if (studentUserId) {
+        await prisma.user.update({
+          where: { id: studentUserId },
+          data: { phoneVerified: true, phone: normalizedPhone }
+        });
+      }
+    }
+
+    // 3. Lead Deduplication and Upsert Logic
     let lead = await prisma.lead.findFirst({
       where: {
         OR: [
@@ -93,7 +122,8 @@ export async function POST(request: Request) {
       highestQualification: data.highestQualification || null,
       interestedInstitutionId: data.interestedInstitutionId || null,
       interestedProgramId: data.interestedProgramId || null,
-      status: "OTP_VERIFIED" as const
+      status: "OTP_VERIFIED" as const,
+      createdStudentUserId: studentUserId
     };
 
     if (lead) {

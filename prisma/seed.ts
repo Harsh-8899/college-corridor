@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { execSync } from "child_process";
 
@@ -26,17 +26,23 @@ async function main() {
 
   // 2. Seed Users linked to Roles
   const users = [
-    { email: "student@collegecorridor.in", name: "Demo Student", roleId: roles["STUDENT"].id, password: defaultPasswordHash },
-    { email: "counselor@collegecorridor.in", name: "Demo Counselor", roleId: roles["COUNSELOR"].id, password: defaultPasswordHash },
-    { email: "admin@collegecorridor.in", name: "Demo Admin", roleId: roles["ADMIN"].id, password: defaultPasswordHash },
-    { email: "superadmin@collegecorridor.in", name: "Demo Super Admin", roleId: roles["SUPER_ADMIN"].id, password: defaultPasswordHash },
-    { email: ADMIN_EMAIL.toLowerCase(), name: "System Admin", roleId: roles["ADMIN"].id, password: bcrypt.hashSync(ADMIN_PASSWORD, 10) }
+    { email: "student@collegecorridor.in", name: "Demo Student", roleId: roles["STUDENT"].id, password: defaultPasswordHash, status: UserStatus.ACTIVE, phoneVerified: true },
+    { email: "counselor@collegecorridor.in", name: "Demo Counselor", roleId: roles["COUNSELOR"].id, password: defaultPasswordHash, status: UserStatus.ACTIVE, phoneVerified: true },
+    { email: "admin@collegecorridor.in", name: "Demo Admin", roleId: roles["ADMIN"].id, password: defaultPasswordHash, status: UserStatus.ACTIVE, phoneVerified: true },
+    { email: "superadmin@collegecorridor.in", name: "Demo Super Admin", roleId: roles["SUPER_ADMIN"].id, password: defaultPasswordHash, status: UserStatus.ACTIVE, phoneVerified: true },
+    { email: ADMIN_EMAIL.toLowerCase(), name: "System Admin", roleId: roles["ADMIN"].id, password: bcrypt.hashSync(ADMIN_PASSWORD, 10), status: UserStatus.ACTIVE, phoneVerified: true }
   ];
 
   for (const user of users) {
     await prisma.user.upsert({
       where: { email: user.email },
-      update: { name: user.name, roleId: user.roleId, password: user.password },
+      update: { 
+        name: user.name, 
+        roleId: user.roleId, 
+        password: user.password,
+        status: UserStatus.ACTIVE,
+        phoneVerified: true
+      },
       create: user
     });
   }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSession } from "next-auth/react";
 
 type LeadCaptureModalProps = {
   triggerLabel?: string;
@@ -38,12 +39,14 @@ export function LeadCaptureModal({
   triggerClassName,
   hideIcon = false
 }: LeadCaptureModalProps) {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -57,6 +60,19 @@ export function LeadCaptureModal({
     budget: "",
     highestQualification: ""
   });
+
+  // Prefill details from session
+  useEffect(() => {
+    if (session?.user) {
+      setForm((prev) => ({
+        ...prev,
+        fullName: prev.fullName || session.user.fullName || session.user.name || "",
+        email: prev.email || session.user.email || "",
+        phone: prev.phone || session.user.phone || "",
+        currentCity: prev.currentCity || (session.user as any).city || ""
+      }));
+    }
+  }, [session, open]);
 
   // Reset category on open if initialCategory is set
   useEffect(() => {
@@ -95,6 +111,31 @@ export function LeadCaptureModal({
     }
   }, [resendCooldown]);
 
+  // Dynamically load Cloudflare Turnstile script if required
+  useEffect(() => {
+    if (!open || session?.user?.phoneVerified) return;
+
+    const script = document.createElement("script");
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+
+    (window as any).onTurnstileSuccess = (token: string) => {
+      setCaptchaToken(token);
+      setError("");
+    };
+
+    return () => {
+      try {
+        document.head.removeChild(script);
+      } catch (e) {
+        // ignore
+      }
+      delete (window as any).onTurnstileSuccess;
+    };
+  }, [open, session?.user?.phoneVerified]);
+
   // Indian Phone Validation: 10 digits starting with 6-9
   const isValidPhone = useMemo(() => {
     const clean = form.phone.replace(/[\s-()]/g, "");
@@ -124,73 +165,12 @@ export function LeadCaptureModal({
     return "";
   }
 
-  // Request OTP (Send SMS logic)
-  async function handleSendOtp() {
-    const err = validateStep1();
-    if (err) {
-      setError(err);
-      return;
-    }
-
-    setError("");
+  // Submit Lead details directly
+  async function submitLeadDetails() {
     setLoading(true);
+    setError("");
 
     try {
-      const res = await fetch("/api/v1/auth/otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: form.phone })
-      });
-
-      const data = await res.json();
-      setLoading(false);
-
-      if (!res.ok) {
-        setError(data?.error?.message || "Failed to send OTP. Please try again.");
-        return;
-      }
-
-      // If OTP was returned in data (dev bypass), print it for convenience
-      if (data?.data?.otp) {
-        console.log(`[DEV ONLY] OTP received from server: ${data.data.otp}`);
-      }
-
-      setStep(2);
-      setResendCooldown(30); // 30s resend cooldown
-    } catch {
-      setLoading(false);
-      setError("Network connection issue. Try again.");
-    }
-  }
-
-  // Verify OTP and Submit Lead
-  async function handleVerifyAndSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (otpCode.length !== 6) {
-      setError("OTP must be exactly 6 digits.");
-      return;
-    }
-
-    setError("");
-    setLoading(true);
-
-    try {
-      // 1. Verify OTP code
-      const verifyRes = await fetch("/api/v1/auth/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: form.phone, code: otpCode })
-      });
-
-      const verifyData = await verifyRes.json();
-
-      if (!verifyRes.ok) {
-        setLoading(false);
-        setError(verifyData?.error?.message || "Invalid OTP code. Please check and try again.");
-        return;
-      }
-
-      // 2. Submit lead details
       const payload = {
         ...form,
         interestedInstitutionId: selectedCollegeIds[0] || undefined,
@@ -213,7 +193,7 @@ export function LeadCaptureModal({
         return;
       }
 
-      // 3. Cache lead details and set unlocked status
+      // Cache lead details and set unlocked status
       window.localStorage.setItem(cachedLeadKey, JSON.stringify(form));
       window.localStorage.setItem(unlockStorageKey, "true");
       
@@ -222,6 +202,94 @@ export function LeadCaptureModal({
       // Reset Modal
       setStep(1);
       setOtpCode("");
+    } catch {
+      setLoading(false);
+      setError("An error occurred during submission. Please try again.");
+    }
+  }
+
+  // Request OTP (Send SMS logic)
+  async function handleSendOtp() {
+    const err = validateStep1();
+    if (err) {
+      setError(err);
+      return;
+    }
+
+    if (session?.user?.phoneVerified) {
+      await submitLeadDetails();
+      return;
+    }
+
+    if (!captchaToken && process.env.NODE_ENV === "production") {
+      setError("Please complete the security captcha verification check.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/v1/auth/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emailOrPhone: form.phone,
+          type: "phone_verification",
+          captchaToken: captchaToken
+        })
+      });
+
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        setError(data?.error?.message || "Failed to send OTP. Please try again.");
+        return;
+      }
+
+      // If OTP was returned in data (dev bypass), print it for convenience
+      if (data?.devCode) {
+        console.log(`[DEV ONLY] OTP received from server: ${data.devCode}`);
+      }
+
+      setStep(2);
+      setResendCooldown(60); // 60s resend cooldown
+    } catch {
+      setLoading(false);
+      setError("Network connection issue. Try again.");
+    }
+  }
+
+  // Verify OTP and Submit Lead
+  async function handleVerifyAndSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (otpCode.length !== 6) {
+      setError("OTP must be exactly 6 digits.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      // 1. Verify OTP code
+      const verifyRes = await fetch("/api/v1/auth/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: form.phone, code: otpCode, type: "phone_verification" })
+      });
+
+      const verifyData = await verifyRes.json();
+
+      if (!verifyRes.ok) {
+        setLoading(false);
+        setError(verifyData?.error?.message || "Invalid OTP code. Please check and try again.");
+        return;
+      }
+
+      // 2. Submit lead details
+      await submitLeadDetails();
     } catch {
       setLoading(false);
       setError("An error occurred during submission. Please try again.");
@@ -357,13 +425,25 @@ export function LeadCaptureModal({
                     </div>
                   </div>
 
-                  <Button onClick={handleSendOtp} disabled={loading} className="w-full mt-4 h-11 text-base">
+                  {/* Cloudflare Turnstile Captcha Section */}
+                  {!session?.user?.phoneVerified && (
+                    <div className="pt-2 flex justify-center">
+                      <div
+                        className="cf-turnstile"
+                        data-sitekey="1x00000000000000000000AA"
+                        data-callback="onTurnstileSuccess"
+                        data-theme="light"
+                      />
+                    </div>
+                  )}
+
+                  <Button onClick={handleSendOtp} disabled={loading} className="w-full mt-4 h-11 text-base bg-[#2563EB] hover:bg-indigo-700 text-white font-semibold">
                     {loading ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-5 w-5 animate-spin" /> Requesting OTP...
+                      <span className="flex items-center gap-2 justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin" /> {session?.user?.phoneVerified ? "Submitting Lead..." : "Requesting OTP..."}
                       </span>
                     ) : (
-                      "Verify Mobile & Continue"
+                      session?.user?.phoneVerified ? "Submit Application" : "Verify Mobile & Continue"
                     )}
                   </Button>
                 </div>

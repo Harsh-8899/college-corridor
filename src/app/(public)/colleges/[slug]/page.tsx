@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -22,6 +21,8 @@ import { PremiumGate } from "@/components/lead/premium-gate";
 import { LeadCaptureModal } from "@/components/lead/lead-capture-modal";
 import { getCollege } from "@/lib/data/colleges";
 import type { Metadata } from "next";
+import { CollegeAdmissionChecker } from "@/components/college/college-admission-checker";
+import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,18 @@ export default async function CollegeDetailsPage({ params }: PageProps) {
   if (!college) {
     notFound();
   }
+
+  const universitiesList = await prisma.institution.findMany({
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      city: true,
+      state: true,
+      logoUrl: true
+    },
+    orderBy: { name: "asc" }
+  });
 
   // Schema Org
   const orgSchema = {
@@ -219,6 +232,13 @@ export default async function CollegeDetailsPage({ params }: PageProps) {
               </p>
             </CardContent>
           </Card>
+
+          {/* Can I Get Admission Here? */}
+          <CollegeAdmissionChecker
+            collegeId={college.id}
+            collegeName={college.name}
+            universitiesList={universitiesList}
+          />
 
           {/* Courses Offered */}
           <Card className="border-muted-foreground/10">
